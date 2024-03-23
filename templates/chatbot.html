@@ -3,69 +3,183 @@
 {% block title %}AI Takagi{% endblock %}
 {% block styles %}
 <style>
-    body, html {
-      height: 100%;
-      background-image: url('/static/img/background/background.webp');
-      background-repeat: no-repeat;
-      background-attachment: fixed;  
-      background-size: cover;
-    }
+  body,
+  html {
+    height: 100%;
+    background-image: url('/static/img/background/background05.webp');
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+  }
 
-    .messages-box {
-      flex: 1;
-      overflow-y: auto;
-    }
+  .card-header {
+    align-items: center;
+    /* 让子元素在垂直方向上居中对齐 */
+  }
 
-    .messages-list {
-      padding-left: 0;
-    }
+  .chatHistory {
+    width: 80%;
+    height: 90%;
+    position: fixed;
+    right: 0;
+    top: 50px;
+    overflow: hidden;
+    transition: transform 0.5s ease-in-out;
+    transform: translateX(100%);
+    /* 初始状态，完全隐藏在右侧 */
+    /* background-color: #ddd; 你可以根据需要更改背景颜色 */
 
-    .message {
-      margin-bottom: 15px;
-      list-style: none;
-    }
+    flex-direction: column;
+  }
 
-    .message-text {
-      padding: 10px;
-      border-radius: 5px;
-    }
+  .chatHistory[open] {
+    flex: 1;
+    overflow-y: scroll;
+    /* 允许上下滚动 */
+    transform: translateX(0);
+    /* 展开时，从右侧滑到视图中 */
+    scrollbar-width: none;
+    /* 隐藏滚动条（Firefox） */
+    -ms-overflow-style: none;
+    /* 隐藏滚动条（IE和Edge） */
+  }
 
-    .sent {
-      background-color: #dcf8c6;
-      align-self: flex-end;
-    }
+  .openChatHistory {
+    font-weight: bold;
+    margin: -.5em -.5em 0;
+    padding: .5em;
+  }
 
-    .received {
-      background-color: #f1f0f0;
-      align-self: flex-start;
-    }
+  .chatHistory[open] openChatHistory {
+    /* border-bottom: 1px solid #ddd; */
+    margin-bottom: .5em;
+  }
 
-    .message-form {
-      display: flex;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 10px;
-      background-color: #f8f9fa;
-    }
+  .chatHistory::-webkit-scrollbar {
+    display: none;
+    /* 隐藏滚动条（Chrome、Safari和Opera） */
+  }
 
-    .message-input {
-      flex: 1;
-      border-radius: 0;
-      border-right: none;
-    }
+  #randomPlayerButton {
+    background-color: transparent;
+    /* 设置背景颜色为透明 */
+    border: none;
+    /* 移除边框 */
+    float: right;
+    /* 让按钮靠右显示 */
+    transform: translate(10%, -15%);
+  }
 
-    .btn-send {
-      border-radius: 0;
-    }
+  #chatHistoryButton {
+    background-color: transparent;
+    /* 设置背景颜色为透明 */
+    border: none;
+    /* 移除边框 */
+    float: right;
+    /* 让按钮靠右显示 */
+    transform: translate(20%, -9%);
+  }
 
-    .chat-container {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-  </style>
+  #logoutButton {
+    background-color: transparent;
+    /* 设置背景颜色为透明 */
+    border: none;
+    /* 移除边框 */
+    float: right;
+    /* 让按钮靠右显示 */
+    transform: translate(30%, -15%);
+  }
+
+  #chatHistoryButton img,
+  #logoutButton img,
+  #randomPlayerButton img {
+    width: 30px;
+    height: 30px;
+  }
+
+  #chatHistoryCloseButton {
+    background-color: transparent;
+    /* 设置背景颜色为透明 */
+    border: none;
+    /* 移除边框 */
+    float: left;
+    /* 让按钮靠右显示 */
+  }
+
+  #chatHistoryCloseButton img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .messages-list {
+    padding-left: 0;
+  }
+
+  .message {
+    margin-bottom: 15px;
+    list-style: none;
+  }
+
+  .message-text {
+    padding: 10px;
+    border-radius: 5px;
+  }
+
+  .message-sender img {
+    border-radius: 60px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .sent {
+    background-color: #dcf8c6;
+    align-self: flex-end;
+  }
+
+  .received {
+    background-color: #f1f0f0;
+    align-self: flex-start;
+  }
+
+  .message-form {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+  }
+
+  .message-input {
+    flex: 1;
+    border-radius: 0;
+    border-right: none;
+  }
+
+  .btn-send {
+    border-radius: 0;
+  }
+
+  .chat-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-image: url('/static/img/Takagi/TakagiOlive.webp');
+    background-repeat: no-repeat;
+    background-position: right bottom;
+    background-size: auto 60vh;
+  }
+
+  .responseMessage {
+    position: absolute;
+    bottom: 17%;
+    width: 90%;
+    margin-left: 25px;
+    margin-right: 25px;
+  }
+</style>
 {% endblock %}
 
 
@@ -74,28 +188,28 @@
   <div class="card-flex-grow-1">
     <!---<div class="card-header bg-primary text-white">聊天</div>--->
     {% if user.is_authenticated %}
-    <div class="card-header bg-primary text-white"><b>欢迎, {{user.username}}</b>   <a style="color: yellow;" href="logout">退出登录</a></div>
+    <div class="card-header bg-primary text-white"><b>欢迎, {{user.username}}</b>
+      <!---<a style="color: yellow;"href="logout"><img src="/static/img/icon/logout.webp"></a>--->
+      <button id="logoutButton">
+        <img src="/static/img/icon/logout.webp" alt="Toggle">
+      </button>
+      <button id="chatHistoryButton">
+        <img src="/static/img/icon/msg.webp" alt="Toggle">
+      </button>
+      <button id="randomPlayerButton">
+        <img src="/static/img/icon/randomPlayer.webp" alt="Toggle">
+      </button>
+    </div>
     {% else %}
-    <div class="card-header bg-primary text-white"><a style="color: yellow" href="login">Login</a>   <a style="color: yellow;" href="register">Register</a></div>
+    <div class="card-header bg-primary text-white"><a style="color: yellow" href="login">Login</a> <a
+        style="color: yellow;" href="register">Register</a></div>
     {% endif %}
-    <div class="card-body messages-box">
-      
+    <div class="card-body chatHistory">
+      <!--<button id="chatHistoryCloseButton"><img src="/static/img/icon/close.webp" alt="Toggle"></button>-->
       <ul class="list-unstyled messages-list">
-        
-        <!-- <li class="message received">
-          <div class="message-text">
-            <div class="message-sender">
-              <b>AI Chatbot</b>
-            </div>
-            <div class="message-content">
-              Hi {{user.username}}, I am your AI Chatbot, you can ask me anything.
-            </div>
-          </div>
-        </li> -->
 
         {% for chat in chats %}
           {% if chat.user == request.user %}
-
             <li class="message sent">
               <div class="message-text">
                 <div class="message-sender">
@@ -110,24 +224,29 @@
             <li class="message received">
               <div class="message-text">
                 <div class="message-sender">
-                  <b>高木</b>
+                  <!---<b>高木</b>--->
+                  <img src="/static/img/icon/TakagiW.webp">
                 </div>
                 <div class="message-content">
                   {{chat.response}}
                 </div>
               </div>
             </li>
-
           {% endif %}
         {% endfor %}
-        
+
       </ul>
-      
+
     </div>
     <br><br>
     <br><br>
     <br><br>
   </div>
+  <div class="responseMessage" style="background-color: rgba(128, 128, 128, 0.6);">
+    <b style="color: white; text-shadow: 0.5px 0.5px 0.5px rgb(255, 122, 144);">高木:</b>
+    <p id="returnMsg" style="color: white; text-shadow: 0.5px 0.5px 0.5px rgb(255, 122, 144);">...</p>
+  </div>
+
   <form class="message-form">
     {%csrf_token%}
     <div class="input-group">
@@ -183,7 +302,7 @@
         messageItem.innerHTML = `
         <div class="message-text">
             <div class="message-sender">
-              <b>高木</b>
+              <img src="/static/img/icon/TakagiW.webp">
             </div>
             <div class="message-content">
                 ${response}
@@ -191,8 +310,43 @@
         </div>
           `;
         messagesList.appendChild(messageItem);
+        document.getElementById('returnMsg').innerHTML = `${response}`;
       });
   });
+
+  document.getElementById('chatHistoryButton').addEventListener('click', function () {
+    var detailsElement = document.querySelector('.chatHistory');
+    if (detailsElement.hasAttribute('open')) {
+      detailsElement.removeAttribute('open');
+      document.getElementsByClassName('responseMessage')[0].style.display = 'block';
+    } else {
+      detailsElement.setAttribute('open', '');
+      document.getElementsByClassName('responseMessage')[0].style.display = 'none';
+    }
+  });
+
+  document.getElementById('logoutButton').addEventListener('click', (event) => {
+    event.preventDefault();
+    const confirmation = confirm('确认退出登录？');
+    if (confirmation) {
+      window.location.href = 'logout';
+    }
+  });
+
+  /*
+  window.onload = function () {
+    var images = [
+      '/static/img/Takagi/TakagiOlive.webp',
+      '/static/img/Takagi/TakagiSinging01.webp',
+      '/static/img/Takagi/TakagiSinging02.webp'
+      // 添加更多图片URL
+    ];
+
+    var randomImage = images[Math.floor(Math.random() * images.length)];
+    var chatContainer = document.querySelector('.chat-container');
+    chatContainer.style.backgroundImage = 'url(' + randomImage + ')';
+  };
+  */
 
 </script>
 {% endblock %}
