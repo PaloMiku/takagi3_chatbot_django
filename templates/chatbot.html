@@ -1,49 +1,91 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static avatar_extras %}
 {% block title %}AI Takagi{% endblock %}
 {% block styles %}
 <style>
+  :root {
+    --header-bg:#0076ff;
+    --header-text:#fff;
+    --panel-bg:rgba(255,255,255,0.85);
+    --panel-border:rgba(0,0,0,0.08);
+    --panel-shadow:0 4px 12px -2px rgba(0,0,0,0.15);
+    --sent-bg:#dcf8c6;
+    --sent-text:#222;
+    --recv-bg:#fff;
+    --recv-text:#222;
+    --bubble-shadow:0 2px 4px rgba(0,0,0,0.08);
+    --input-bg:rgba(255,255,255,0.9);
+    --accent:#1e88ff;
+    --scroll-thumb:rgba(0,0,0,.25);
+  }
+  body.dark {
+    --header-bg:#0d2538;
+    --header-text:#f1f6fa;
+    --panel-bg:rgba(28,44,58,0.9);
+    --panel-border:rgba(255,255,255,0.08);
+    --panel-shadow:0 4px 16px -3px rgba(0,0,0,0.55);
+    --sent-bg:#2f6b3a;
+    --sent-text:#e6f9ec;
+    --recv-bg:#1f3242;
+    --recv-text:#e2edf5;
+    --bubble-shadow:0 2px 6px rgba(0,0,0,0.45);
+    --input-bg:rgba(25,38,50,0.85);
+    --accent:#4dabf7;
+    --scroll-thumb:rgba(255,255,255,.35);
+    background-color:#0a1823;
+  }
   body,
   html {
     height: 100%;
-    background-image: url('/static/img/background/background05.webp');
+    background-image: url("{% static 'img/background/background05.webp' %}");
     background-repeat: no-repeat;
     background-attachment: fixed;
     background-size: cover;
     background-position: center;
+    transition: background-color .4s ease,color .3s ease;
   }
 
   .card-header {
-    align-items: center;
-    /* 让子元素在垂直方向上居中对齐 */
+    --glass-bg: linear-gradient(120deg, rgba(255,255,255,0.75), rgba(255,255,255,0.55));
+    --glass-border: rgba(255,255,255,0.4);
+    --glass-shadow: 0 4px 18px -6px rgba(0,0,0,.25);
+    display:flex; align-items:center; gap:14px; padding:10px 18px; min-height:66px; box-sizing:border-box; position:fixed; top:0; left:0; right:0; z-index:200;
+    background: var(--header-bg, #0076ff);
+    color: var(--header-text,#fff);
+    box-shadow:0 2px 6px -2px rgba(0,0,0,0.25);
+    backdrop-filter: blur(14px) saturate(140%);
   }
+  body.dark .card-header { background:linear-gradient(135deg,#0d2538,#133951); }
+  .brand { font-size:18px; font-weight:600; letter-spacing:.5px; display:flex; align-items:center; gap:8px; }
+  .brand img { width:34px; height:34px; object-fit:cover; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  .header-spacer { flex:1; }
+  .icon-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.4); width:46px; height:46px; display:flex; align-items:center; justify-content:center; padding:6px; border-radius:14px; cursor:pointer; transition:.25s; position:relative; }
+  .icon-btn img { width:28px; height:28px; }
+  .icon-btn:hover { background:rgba(255,255,255,0.3); transform:translateY(-2px); box-shadow:0 4px 10px -3px rgba(0,0,0,.35); }
+  body.dark .icon-btn { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); }
+  body.dark .icon-btn:hover { background:rgba(255,255,255,0.18); }
+  #themeToggleButton { font-size:22px; }
+  .user-avatar-small { width:42px; height:42px; border-radius:50%; object-fit:cover; box-shadow:0 2px 6px rgba(0,0,0,.3); border:2px solid rgba(255,255,255,.6); }
 
   .chatHistory {
-    width: 80%;
-    height: 90%;
-    position: fixed;
-    right: 0;
-    top: 50px;
-    overflow: hidden;
-    transition: transform 0.5s ease-in-out;
-    transform: translateX(100%);
-    /* 初始状态，完全隐藏在右侧 */
-    /* background-color: #ddd; 你可以根据需要更改背景颜色 */
-
-    flex-direction: column;
+    width: clamp(300px,32vw,420px);
+    height: calc(100% - 60px);
+    position: fixed; right:0; top:60px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px) saturate(140%);
+    border-left:1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    border-radius:10px 0 0 10px;
+    overflow:hidden;
+    transform: translateX(105%);
+    transition: transform .45s cubic-bezier(.68,-0.4,.32,1.4), box-shadow .3s;
+  display:flex; flex-direction:column; z-index:80; /* 低于 header */
   }
-
-  .chatHistory[open] {
-    flex: 1;
-    overflow-y: scroll;
-    /* 允许上下滚动 */
-    transform: translateX(0);
-    /* 展开时，从右侧滑到视图中 */
-    scrollbar-width: none;
-    /* 隐藏滚动条（Firefox） */
-    -ms-overflow-style: none;
-    /* 隐藏滚动条（IE和Edge） */
-  }
+  .chatHistory.open { transform: translateX(0); }
+  .chatHistory.open:hover { box-shadow:0 6px 20px -4px rgba(0,0,0,.25); }
+  .chatHistory .messages-list { flex:1; overflow-y:auto; padding:18px 18px 140px; margin:0; }
+  .chatHistory .messages-list::-webkit-scrollbar { width:10px; }
+  .chatHistory .messages-list::-webkit-scrollbar-thumb { background:var(--scroll-thumb); border-radius:6px; }
 
   .openChatHistory {
     font-weight: bold;
@@ -55,130 +97,85 @@
     /* border-bottom: 1px solid #ddd; */
     margin-bottom: .5em;
   }
+  .card-header b { margin-right: auto; font-weight: 600; }
 
-  .chatHistory::-webkit-scrollbar {
-    display: none;
-    /* 隐藏滚动条（Chrome、Safari和Opera） */
-  }
-
-  #randomPlayerButton {
-    background-color: transparent;
-    /* 设置背景颜色为透明 */
+  .card-header button {
+    background: transparent;
     border: none;
-    /* 移除边框 */
-    float: right;
-    /* 让按钮靠右显示 */
-    transform: translate(10%, -15%);
+    padding: 4px;
+    cursor: pointer;
+    line-height: 0;
   }
 
-  #chatHistoryButton {
-    background-color: transparent;
-    /* 设置背景颜色为透明 */
-    border: none;
-    /* 移除边框 */
-    float: right;
-    /* 让按钮靠右显示 */
-    transform: translate(20%, -9%);
-  }
-
-  #logoutButton {
-    background-color: transparent;
-    /* 设置背景颜色为透明 */
-    border: none;
-    /* 移除边框 */
-    float: right;
-    /* 让按钮靠右显示 */
-    transform: translate(30%, -15%);
-  }
-
-  #chatHistoryButton img,
   #logoutButton img,
+  #chatHistoryButton img,
   #randomPlayerButton img {
-    width: 30px;
-    height: 30px;
-  }
-
-  #chatHistoryCloseButton {
-    background-color: transparent;
-    /* 设置背景颜色为透明 */
-    border: none;
-    /* 移除边框 */
-    float: left;
-    /* 让按钮靠右显示 */
-  }
-
-  #chatHistoryCloseButton img {
-    width: 30px;
-    height: 30px;
-  }
-
-  .messages-list {
-    padding-left: 0;
-  }
-
-  .message {
-    margin-bottom: 15px;
-    list-style: none;
-  }
-
-  .message-text {
-    padding: 10px;
-    border-radius: 5px;
-  }
-
-  .message-sender img {
-    border-radius: 60px;
     width: 40px;
     height: 40px;
+    display: block;
+    object-fit: contain;
   }
 
-  .sent {
-    background-color: #dcf8c6;
-    align-self: flex-end;
+  /* 头像大小（AI头像） */
+  .message-sender img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+    object-fit: cover;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.18);
   }
 
-  .received {
-    background-color: #f1f0f0;
-    align-self: flex-start;
-  }
+  /* message bubbles */
+  .messages-list { padding:0; }
+  .message { list-style:none; display:flex; margin:0 0 14px; max-width:92%; }
+  .message.sent { margin-left:auto; justify-content:flex-end; }
+  .message.received { margin-right:auto; }
+  .message-text { display:flex; gap:10px; align-items:flex-start; }
+  .message-sender { flex-shrink:0; }
+  .message-content { position:relative; padding:10px 14px; border-radius:16px; line-height:1.4; font-size:14.5px; box-shadow:var(--bubble-shadow); word-break:break-word; background:var(--recv-bg); color:var(--recv-text); }
+  .sent .message-content { background:var(--sent-bg); color:var(--sent-text); border-top-right-radius:4px; }
+  .received .message-content { border-top-left-radius:4px; }
+  body.dark .message-content { border:1px solid var(--panel-border); }
+  .message-content:after { content:""; position:absolute; width:10px; height:10px; background:inherit; bottom:0; }
+  .sent .message-content:after { right:-4px; clip-path:polygon(0 0,100% 0,100% 100%); border-bottom-right-radius:3px; }
+  .received .message-content:after { left:-4px; clip-path:polygon(0 0,0 100%,100% 0); border-bottom-left-radius:3px; }
 
   .message-form {
-    display: flex;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 10px;
-    background-color: #f8f9fa;
+    padding: 10px 14px;
+    background: rgba(248,249,250,0.92);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.08);
+    z-index: 30;
   }
 
-  .message-input {
-    flex: 1;
-    border-radius: 0;
-    border-right: none;
-  }
+  .message-input { flex:1; border-right:none; background: var(--input-bg); backdrop-filter: blur(8px); border:1px solid var(--panel-border); }
+  body.dark .message-input { color: var(--recv-text); }
 
-  .btn-send {
-    border-radius: 0;
-  }
+  .btn-send { border-radius:0; background: var(--accent); border-color: var(--accent); font-weight:600; }
+  .btn-send:hover { filter:brightness(1.08); }
 
   .chat-container {
     height: 100%;
     display: flex;
     flex-direction: column;
-    background-image: url('/static/img/Takagi/TakagiOlive.webp');
+  background-image: url("{% static 'img/Takagi/TakagiOlive.webp' %}");
     background-repeat: no-repeat;
     background-position: right bottom;
     background-size: auto 60vh;
   }
 
-  .responseMessage {
-    position: absolute;
-    bottom: 17%;
-    width: 90%;
-    margin-left: 25px;
-    margin-right: 25px;
-  }
+  .responseMessage { position:absolute; bottom:18%; left:50%; transform:translateX(-50%); width:min(900px,92%); padding:12px 16px 8px; border-radius:16px; background:linear-gradient(135deg, rgba(128,128,128,0.55), rgba(80,80,80,0.45)); backdrop-filter:blur(10px); box-shadow:0 4px 18px -6px rgba(0,0,0,.4); pointer-events:none; }
+  body.dark .responseMessage { background:linear-gradient(135deg, rgba(30,46,60,0.7), rgba(20,30,40,0.65)); }
+  body.no-scroll-overlay { overflow:hidden; }
+
+  #themeToggleButton { background:transparent; border:none; padding:4px; cursor:pointer; line-height:0; color:var(--header-text); font-size:26px; }
+  #themeToggleButton:focus-visible { outline:2px solid var(--header-text); outline-offset:3px; }
+  @media (max-width: 820px) { .chatHistory { width:100%; top:58px; border-radius:0; height:calc(100% - 58px);} .responseMessage{ bottom:26%;} #logoutButton img,#chatHistoryButton img,#randomPlayerButton img{ width:30px;height:30px;} .card-header{ gap:6px; padding:6px 10px;} }
+  @media (max-width: 600px){ .message-sender img{ width:38px; height:38px; border-radius:10px; } }
 </style>
 {% endblock %}
 
@@ -188,32 +185,32 @@
   <div class="card-flex-grow-1">
     <!---<div class="card-header bg-primary text-white">聊天</div>--->
     {% if user.is_authenticated %}
-    <div class="card-header bg-primary text-white"><b>欢迎, {{user.username}}</b>
-      <!---<a style="color: yellow;"href="logout"><img src="/static/img/icon/logout.webp"></a>--->
-      <button id="logoutButton">
-        <img src="/static/img/icon/logout.webp" alt="Toggle">
-      </button>
-      <button id="chatHistoryButton">
-        <img src="/static/img/icon/msg.webp" alt="Toggle">
-      </button>
-      <button id="randomPlayerButton">
-        <img src="/static/img/icon/randomPlayer.webp" alt="Toggle">
-      </button>
+    <div class="card-header">
+      <div class="brand">
+        <img src="{% static 'img/icon/TakagiW.webp' %}" alt="Takagi">
+        <span>欢迎, {{ user.username }}</span>
+      </div>
+      <div class="header-spacer"></div>
+      <button id="chatHistoryButton" class="icon-btn" aria-expanded="false" aria-controls="chatHistory" aria-label="history"><img src="{% static 'img/icon/msg.webp' %}" alt="历史"></button>
+      <button id="randomPlayerButton" class="icon-btn" aria-label="player"><img src="{% static 'img/icon/randomPlayer.webp' %}" alt="随机"></button>
+      <button id="themeToggleButton" class="icon-btn" title="切换主题" aria-label="toggle theme">🌓</button>
+      <button id="logoutButton" class="icon-btn" aria-label="logout"><img src="{% static 'img/icon/logout.webp' %}" alt="退出"></button>
+      <img class="user-avatar-small" src="{{ user.email|cravatar:80 }}" alt="avatar">
     </div>
     {% else %}
     <div class="card-header bg-primary text-white"><a style="color: yellow" href="login">Login</a> <a
         style="color: yellow;" href="register">Register</a></div>
     {% endif %}
-    <div class="card-body chatHistory">
+  <div id="chatHistory" class="card-body chatHistory" aria-hidden="true">
       <!--<button id="chatHistoryCloseButton"><img src="/static/img/icon/close.webp" alt="Toggle"></button>-->
       <ul class="list-unstyled messages-list">
 
         {% for chat in chats %}
           {% if chat.user == request.user %}
             <li class="message sent">
-              <div class="message-text">
+              <div class="message-text" title="{{ user.username }}">
                 <div class="message-sender">
-                  <b>{{user.username}}</b>
+                  <img src="{{ user.email|cravatar:80 }}" alt="{{ user.username }}">
                 </div>
                 <div class="message-content">
                   {{chat.message}}
@@ -225,7 +222,7 @@
               <div class="message-text">
                 <div class="message-sender">
                   <!---<b>高木</b>--->
-                  <img src="/static/img/icon/TakagiW.webp">
+                  <img src="{% static 'img/icon/TakagiW.webp' %}" alt="Takagi">
                 </div>
                 <div class="message-content">
                   {{chat.response}}
@@ -250,7 +247,7 @@
   <form class="message-form">
     {%csrf_token%}
     <div class="input-group">
-      <input type="text" class="form-control message-input" placeholder="在此输入你的提问...">
+  <input type="text" class="form-control message-input" placeholder="在此输入你的提问..." aria-label="message input">
       <div class="input-group-append">
         <button type="submit" class="btn btn-primary btn-send">发送</button>
       </div>
@@ -258,95 +255,131 @@
   </form>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-  const messagesList = document.querySelector('.messages-list');
-  const messageForm = document.querySelector('.message-form');
-  const messageInput = document.querySelector('.message-input');
+  (function() {
+    const messagesList = document.querySelector('.messages-list');
+    const messageForm = document.querySelector('.message-form');
+    const messageInput = document.querySelector('.message-input');
+    const chatHistoryPanel = document.getElementById('chatHistory');
+    const responsePanel = document.querySelector('.responseMessage');
+    const themeBtn = document.getElementById('themeToggleButton');
 
-  messageForm.addEventListener('submit', (event) => {
-    event.preventDefault();
+    // 初始化主题
+    const savedTheme = localStorage.getItem('chatTheme');
+    if (savedTheme === 'dark') document.body.classList.add('dark');
+    updateThemeIcon();
 
-    const message = messageInput.value.trim();
-    if (message.length === 0) {
-      return;
+    function updateThemeIcon(){
+      if(!themeBtn) return;
+      const dark = document.body.classList.contains('dark');
+      themeBtn.textContent = dark ? '🌞' : '🌓';
+    }
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('chatTheme', document.body.classList.contains('dark') ? 'dark' : 'light');
+      updateThemeIcon();
+    });
+
+    function scrollToBottom() {
+      if (chatHistoryPanel.classList.contains('open')) {
+        chatHistoryPanel.scrollTop = chatHistoryPanel.scrollHeight;
+      }
+    }
+    window.requestAnimationFrame(scrollToBottom);
+
+    let ws = null;
+    function initWS(){
+      try {
+        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${window.location.host}/ws/chat/`);
+        ws.onopen = () => {};
+        ws.onmessage = (ev) => {
+          try {
+            const data = JSON.parse(ev.data);
+            if(data.delta){
+              currentReplyBuffer.textContent += data.delta;
+              document.getElementById('returnMsg').textContent = currentReplyBuffer.textContent;
+              scrollToBottom();
+            } else if(data.done){
+              currentReplyBuffer = null;
+            } else if(data.error){
+              fallbackPost(lastUserMessage, true, data.error);
+            }
+          } catch(e){}
+        };
+        ws.onclose = () => { ws = null; };
+        ws.onerror = () => { ws = null; };
+      } catch(e) { ws = null; }
+    }
+    initWS();
+
+    let currentReplyBuffer = null;
+    let lastUserMessage = '';
+
+    function fallbackPost(message, appendError, errText){
+      fetch('', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+          'message': message
+        })
+      }).then(r => r.json()).then(data => {
+        const response = (appendError && errText ? `[WS失败:${errText}] ` : '') + data.response;
+        if(currentReplyBuffer){ currentReplyBuffer.textContent = response; }
+        document.getElementById('returnMsg').textContent = response;
+        scrollToBottom();
+        currentReplyBuffer = null;
+      }).catch(err => console.error(err));
     }
 
-    const messageItem = document.createElement('li');
-    messageItem.classList.add('message', 'sent');
-    messageItem.innerHTML = `
-        <div class="message-text">
-            <div class="message-sender">
-                <b>{{user.username}}</b>
-            </div>
-            <div class="message-content">
-                ${message}
-            </div>
-        </div>`;
-    messagesList.appendChild(messageItem);
+    messageForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const message = messageInput.value.trim();
+      if(!message) return;
+      lastUserMessage = message;
+      // 插入用户气泡
+      const messageItem = document.createElement('li');
+      messageItem.className = 'message sent';
+      messageItem.innerHTML = `<div class=\"message-text\" title=\"{{ user.username }}\"><div class=\"message-sender\"><img src=\"{{ user.email|cravatar:80 }}\" alt=\"{{ user.username }}\"></div><div class=\"message-content\"></div></div>`;
+      messageItem.querySelector('.message-content').textContent = message;
+      messagesList.appendChild(messageItem);
+      // 创建 AI 回复占位
+      const reply = document.createElement('li');
+      reply.className = 'message received';
+      reply.innerHTML = `<div class="message-text"><div class="message-sender"><img src="{% static 'img/icon/TakagiW.webp' %}" alt="Takagi"></div><div class="message-content"></div></div>`;
+      messagesList.appendChild(reply);
+      currentReplyBuffer = reply.querySelector('.message-content');
+      currentReplyBuffer.textContent = '';
+      document.getElementById('returnMsg').textContent = '';
+      scrollToBottom();
+      messageInput.value='';
 
-    messageInput.value = '';
+      if(ws && ws.readyState === WebSocket.OPEN){
+        ws.send(JSON.stringify({message}));
+      } else {
+        fallbackPost(message, false);
+      }
+    });
 
-    fetch('', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-        'message': message
-      })
-    })
-      .then(response => response.json())
-      .then(data => {
-        const response = data.response;
-        const messageItem = document.createElement('li');
-        messageItem.classList.add('message', 'received');
-        messageItem.innerHTML = `
-        <div class="message-text">
-            <div class="message-sender">
-              <img src="/static/img/icon/TakagiW.webp">
-            </div>
-            <div class="message-content">
-                ${response}
-            </div>
-        </div>
-          `;
-        messagesList.appendChild(messageItem);
-        document.getElementById('returnMsg').innerHTML = `${response}`;
-      });
-  });
+    document.getElementById('chatHistoryButton').addEventListener('click', function () {
+      const expanded = chatHistoryPanel.classList.toggle('open');
+      this.setAttribute('aria-expanded', expanded);
+      chatHistoryPanel.setAttribute('aria-hidden', !expanded);
+      responsePanel.style.display = expanded ? 'none' : 'block';
+      scrollToBottom();
+  document.body.classList.toggle('no-scroll-overlay', expanded);
+    });
 
-  document.getElementById('chatHistoryButton').addEventListener('click', function () {
-    var detailsElement = document.querySelector('.chatHistory');
-    if (detailsElement.hasAttribute('open')) {
-      detailsElement.removeAttribute('open');
-      document.getElementsByClassName('responseMessage')[0].style.display = 'block';
-    } else {
-      detailsElement.setAttribute('open', '');
-      document.getElementsByClassName('responseMessage')[0].style.display = 'none';
-    }
-  });
-
-  document.getElementById('logoutButton').addEventListener('click', (event) => {
-    event.preventDefault();
-    const confirmation = confirm('确认退出登录？');
-    if (confirmation) {
-      window.location.href = 'logout';
-    }
-  });
-
-  /*
-  window.onload = function () {
-    var images = [
-      '/static/img/Takagi/TakagiOlive.webp',
-      '/static/img/Takagi/TakagiSinging01.webp',
-      '/static/img/Takagi/TakagiSinging02.webp'
-      // 添加更多图片URL
-    ];
-
-    var randomImage = images[Math.floor(Math.random() * images.length)];
-    var chatContainer = document.querySelector('.chat-container');
-    chatContainer.style.backgroundImage = 'url(' + randomImage + ')';
-  };
-  */
-
+    document.getElementById('logoutButton').addEventListener('click', (event) => {
+      event.preventDefault();
+      if (confirm('确认退出登录？')) {
+        window.location.href = 'logout';
+      }
+    });
+  })();
 </script>
 {% endblock %}

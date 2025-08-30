@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from typing import Callable, Optional
+
+# 加载 .env （存在则读取）
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -22,13 +25,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ['SECRET_KEY']
+def _get_env(name: str, default: Optional[str] = None, *, cast: Optional[Callable[[str], object]] = None):
+    """读取环境变量，允许提供默认值与类型转换。"""
+    val = os.getenv(name, default)
+    if cast and val is not None:
+        try:
+            return cast(val)
+        except Exception:
+            return default
+    return val
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# 生产环境请在 .env / 外部环境彻底设置 SECRET_KEY
+SECRET_KEY = _get_env('SECRET_KEY', 'dev-insecure-key')
+DEBUG = _get_env('DJANGO_DEBUG', 'False', cast=lambda v: v.lower() in {'1', 'true', 'yes'})
+_raw_hosts = _get_env('ALLOWED_HOSTS', '127.0.0.1,localhost')
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
+if DEBUG and '127.0.0.1' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('127.0.0.1')
 
-ALLOWED_HOSTS = ['127.0.0.1', '.localhost']
+# OpenAI 环境变量（在 views 中统一调用）
+OPENAI_API_KEY = _get_env('OPENAI_API_KEY')
+OPENAI_BASE_URL = _get_env('OPENAI_BASE_URL')  # 例如自建代理或 Azure Endpoint
+OPENAI_DEFAULT_MODEL = _get_env('OPENAI_MODEL_DEFAULT', 'gpt-3.5-turbo')
+# 每次构造上下文的近似 token 上限（粗略估算用字符长度换算）
+TOKEN_CONTEXT_LIMIT = int(_get_env('TOKEN_CONTEXT_LIMIT', '3000'))
 # SECURE_SSL_REDIRECT = True
 # SECURE_HSTS_SECONDS = 2
 # SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -45,6 +65,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'chatbot',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -62,7 +83,8 @@ ROOT_URLCONF = 'django_chatbot.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR, 'templates'],
+        # 只需显式指向 templates 目录
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -76,6 +98,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'django_chatbot.wsgi.application'
+ASGI_APPLICATION = 'django_chatbot.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    }
+}
 
 
 # Database
@@ -122,12 +151,13 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
-#STATIC_DIR = os.path.join(BASE_DIR, "static")
-#STATICFILES_DIRS=[os.path.join(BASE_DIR,'static')]
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# 开发源文件目录
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+# 收集后的目标目录（部署 collectstatic 使用）
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Media files (CSS, JavaScript, Images)
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 

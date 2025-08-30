@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}个人设置{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width:720px;">
+  <h3>个人模型配置</h3>
+  {% if saved %}<div class="alert alert-success">已保存</div>{% endif %}
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">模型名称</label>
+      <input name="modelName" class="form-control" value="{{ user_setting.modelName }}" placeholder="例如 gpt-3.5-turbo 或 deepseek-chat" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">自定义 API Key (优先使用)</label>
+      <input name="user_api_key" class="form-control" value="{{ user_setting.user_api_key }}" placeholder="sk-..." />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">自定义 Base URL (可选)</label>
+      <input name="user_base_url" class="form-control" value="{{ user_setting.user_base_url }}" placeholder="https://api.openai.com/v1" />
+    </div>
+    <p class="text-muted small">提示：prompt 不可在此页面修改。如需全局摘要指令请到后台 BotSetting。</p>
+    <button class="btn btn-primary" type="submit">保存</button>
+    <a class="btn btn-secondary" href="/">返回聊天</a>
+  </form>
+</div>
+{% endblock %}
