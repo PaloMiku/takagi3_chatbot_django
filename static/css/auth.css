@@ -1,0 +1,275 @@
+/* ========= 基础变量 ========= */
+:root {
+    --auth-max-width: 420px;
+    --auth-inner-hpad: 40px;
+    --auth-radius: 24px;
+    --auth-input-radius: 12px;
+    --auth-fs-base: 16px;
+    --auth-fs-small: 14px;
+    --auth-label-fs: 14px;
+    --auth-gap: 20px;
+
+    --color-primary: #4f46e5;
+    --color-primary-light: #6366f1;
+    --color-text-primary: #1e293b;
+    --color-text-secondary: #64748b;
+    --color-border: #cbd5e1;
+    --color-background: #f1f5f9;
+    --color-card-bg: #ffffff;
+    --color-error: #dc2626;
+    --color-error-bg: #fef2f2;
+}
+
+/* ========= 基础布局 ========= */
+body {
+    background-color: var(--color-background);
+    font-family: "LXGW WenKai Screen", 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--color-text-primary);
+    line-height: 1.6;
+}
+
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: var(--auth-max-width);
+    background: var(--color-card-bg);
+    border-radius: var(--auth-radius);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.auth-header {
+    padding: 32px var(--auth-inner-hpad) 16px;
+    text-align: center;
+}
+
+.auth-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.auth-sub {
+    font-size: var(--auth-fs-small);
+    color: var(--color-text-secondary);
+    margin-top: 8px;
+}
+
+form {
+    padding: 16px var(--auth-inner-hpad) 32px;
+}
+
+/* ========= 表单元素 ========= */
+.form-group {
+    margin-bottom: var(--auth-gap);
+}
+
+label {
+    font-weight: 500;
+    font-size: var(--auth-label-fs);
+    color: var(--color-text-primary);
+    display: block;
+    margin-bottom: 8px;
+}
+
+.form-control {
+    border: 1px solid var(--color-border);
+    border-radius: var(--auth-input-radius);
+    padding: 12px 16px;
+    font-size: var(--auth-fs-base);
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background-color: #fff;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+/* 双列布局 (用于验证码) */
+.dual-inline {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.dual-inline .form-control {
+    flex: 1;
+}
+
+/* ========= 按钮 ========= */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--auth-input-radius);
+    cursor: pointer;
+    transition: all 0.25s;
+    font-size: var(--auth-fs-base);
+    padding: 12px 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.btn-primary {
+    background: linear-gradient(90deg, var(--color-primary-light), var(--color-primary));
+    color: #fff;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -2px rgba(79, 70, 229, 0.2);
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2), 0 4px 6px -2px rgba(79, 70, 229, 0.2);
+}
+
+.btn-secondary {
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    width: auto;
+    flex-shrink: 0;
+}
+
+.btn-secondary:hover {
+    background-color: #e2e8f0;
+}
+
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--color-background);
+}
+
+/* ========= 反馈 & 附加 ========= */
+.alert {
+    border-radius: var(--auth-input-radius);
+    padding: 12px 16px;
+    font-size: var(--auth-fs-small);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 0 var(--auth-inner-hpad) 16px;
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+
+.switch-link {
+    text-align: center;
+    margin-top: 24px;
+    font-size: var(--auth-fs-small);
+}
+
+.switch-link a {
+    color: var(--color-primary);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.switch-link a:hover {
+    text-decoration: underline;
+}
+
+/* 密码强度 */
+.pwd-meter {
+    height: 6px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.pwd-meter-bar {
+    height: 100%;
+    width: 0;
+    background: var(--color-error);
+    transition: width 0.3s, background-color 0.3s;
+}
+.pwd-meter-bar.strength-1 { background-color: #f97171; }
+.pwd-meter-bar.strength-2 { background-color: #fbbF77; }
+.pwd-meter-bar.strength-3 { background-color: #34d399; }
+.pwd-meter-bar.strength-4 { background-color: #60a5fa; }
+
+
+.pwd-hint {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-top: 6px;
+    height: 16px;
+}
+
+.code-sent {
+    font-size: 12px;
+    color: #16a34a;
+    margin-top: 8px;
+    display: none;
+}
+
+.pwd-toggle {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--color-primary);
+    user-select: none;
+    font-weight: 500;
+}
+.form-group.password-group {
+    position: relative;
+}
+.password-group .form-control {
+    padding-right: 60px;
+}
+
+
+/* ========= 响应式 ========= */
+@media (max-width: 480px) {
+    :root {
+        --auth-inner-hpad: 24px;
+        --auth-fs-base: 15px;
+    }
+    .auth-wrapper {
+        padding: 16px;
+    }
+    .auth-card {
+        border-radius: 20px;
+    }
+    .auth-header {
+        padding: 24px var(--auth-inner-hpad) 8px;
+    }
+    .auth-title {
+        font-size: 26px;
+    }
+    form {
+        padding: 16px var(--auth-inner-hpad) 24px;
+    }
+    .dual-inline {
+        flex-direction: column;
+    }
+    .dual-inline .btn-secondary {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}

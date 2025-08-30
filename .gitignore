@@ -11,10 +11,10 @@ __pycache__/
 db.sqlite3
 /media/
 
-# Django static (ignore all generated, keep admin)
-static/**
-!static/admin/
+# Django static
+
 staticfiles/**
+
 # uv
 uv.lock
 
