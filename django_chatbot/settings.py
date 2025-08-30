@@ -71,17 +71,17 @@ if not EMAIL_HOST or not EMAIL_HOST_USER:
 # Application definition
 
 INSTALLED_APPS = [
+    # 将自定义 app 放在 auth 之前以覆盖 createsuperuser 命令
+    'chatbot',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    # 注意: 为了确保使用 Channels 提供的 runserver (支持 WebSocket)，
-    # 需让 channels 的 management command 在 django.contrib.staticfiles 之前被注册。
+    # Channels / Daphne 必须在 staticfiles 之前以使用替换的 runserver
     'daphne',
     'channels',
     'django.contrib.staticfiles',
-    'chatbot',
 ]
 
 MIDDLEWARE = [

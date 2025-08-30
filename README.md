@@ -1,90 +1,127 @@
 # Takagi3 Chatbot Django
 
-一个基于 Django + OpenAI Chat Completions API 的简易聊天站点（高木同学人格预设）。
+一个基于 Django + Channels + OpenAI Chat Completions API 的简易聊天站点（高木同学人格预设）。
+
+> 注意：仓库初始不再附带默认的 `db.sqlite3`，首次启动需自行迁移创建。
 
 ## 功能概述
-- 用户注册 / 登录 / 注销
-- 管理后台可配置全局 BotSetting（API Key、摘要指令）
-- 每个用户独立的长对话上下文与个性化 Prompt（超过阈值自动生成摘要，降低 token）
-- 简单的网页聊天界面
+* 用户注册 / 登录 / 注销（注册含邮箱验证码、密码强度校验）
+* 管理后台可配置全局 BotSetting（全局 API Key、摘要指令）
+* 用户独立会话上下文（Message 表持久化，按 `conversation_id` 分组）
+* 超阈值自动摘要（减少历史 token，插入 `is_summary` system message）
+* WebSocket 实时流式回复（`/ws/chat/`）+ 普通表单 POST 兼容
+* 用户自定义：模型名、专属 API Key、Base URL、头像 URL、昵称
+* 静态资源与 WhiteNoise 压缩缓存
 
-## 架构与依赖
-- Python 3.10+
-- Django 4.1.7（内置 sqlite）
-- openai >=1.0.0
-- python-dotenv 读取 `.env`
-- 使用 `uv` 作为依赖与运行管理工具（极速安装）
+## 目录结构速览
+```
+django_chatbot/    # 项目配置、ASGI/WSGI/urls/settings
+chatbot/           # 应用：models / views / consumers / urls
+templates/         # HTML 模板（login, register, chatbot, user_settings 等）
+static/            # 前端静态资源 (css/js/img)
+pyproject.toml     # 依赖与构建（使用 uv）
+.env.example       # 环境变量示例
+```
 
-## 快速开始
+## 运行环境与依赖
+* Python >= 3.10
+* Django 4.2.x
+* channels 4.x + daphne 4.x （ASGI & WebSocket）
+* openai >= 1.0.0
+* python-dotenv 加载环境变量
+* whitenoise 提供静态文件（生产无需额外 Nginx 托管静态）
+* uv （极速包管理 & 虚拟环境）
+
+## 一键快速启动 (开发模式)
 ```bash
 # 1. 安装 uv (若未安装)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 2. 克隆仓库后进入目录
+# 2. 克隆仓库并进入
+git clone https://github.com/PaloMiku/takagi3_chatbot_django.git
 cd takagi3_chatbot_django
 
-# 3. 创建并填写环境变量
+# 3. 初始化环境变量
 cp .env.example .env
-# 编辑 .env ：SECRET_KEY / OPENAI_API_KEY / DJANGO_DEBUG / ALLOWED_HOSTS
+# 必填: SECRET_KEY / OPENAI_API_KEY
+# 可选: OPENAI_BASE_URL / OPENAI_MODEL_DEFAULT / 邮件配置
 
-# 4. 安装依赖
-uv sync  # 读取 pyproject.toml 并生成虚拟环境 .venv
+# 4. 安装依赖 (自动创建 .venv)
+uv sync
 
-# 5. 迁移数据库
+# 5. 生成数据库
 uv run python manage.py migrate
 
-# 6. 创建超级用户（用于后台设置 BotSetting）
+# 6. 创建后台超级用户
 uv run python manage.py createsuperuser
 
-# 7. 收集静态文件（可选：开发期 DEBUG=True 时可不做）
+# 7. (可选) 收集静态文件
 uv run python manage.py collectstatic --noinput
 
 # 8. 启动开发服务器
 uv run python manage.py runserver
+
 ```
-浏览器访问: http://127.0.0.1:8000/ ；后台 http://127.0.0.1:8000/admin/
+访问：
+* 前台：http://127.0.0.1:8000/
+* 后台：http://127.0.0.1:8000/admin/
+* WebSocket Endpoint：`ws://127.0.0.1:8000/ws/chat/`（需已登录 Cookie 会话）
 
-## 配置说明
-`.env` 示例：
+## `.env` 配置详解
+参考 `.env.example`：
 ```
-SECRET_KEY=django-insecure-xxxx
-OPENAI_API_KEY=sk-xxxxx
-OPENAI_BASE_URL=   # 若使用代理/自建网关/企业版，此处填完整 base url 可选
-OPENAI_MODEL_DEFAULT=gpt-3.5-turbo
-DJANGO_DEBUG=True
-ALLOWED_HOSTS=127.0.0.1,localhost
+SECRET_KEY=django-insecure-xxxx              # 生产务必更换
+OPENAI_API_KEY=sk-xxxxx                     # 可被用户或 BotSetting 覆盖
+OPENAI_BASE_URL=https://api.deepseek.com/v1 # 可选: 自建代理/兼容端点
+OPENAI_MODEL_DEFAULT=deepseek-chat          # 默认模型
+DJANGO_DEBUG=True                           # 生产改 False
+ALLOWED_HOSTS=127.0.0.1,localhost           # 多个以逗号分隔
+
+# 邮件（注册验证码）
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=465
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+DEFAULT_FROM_EMAIL=no-reply@example.com
+
+# 可选：上下文 token 粗算上限（字符/4）
+TOKEN_CONTEXT_LIMIT=3000
 ```
 
-`settings.py` 中：
-- SECRET_KEY / DEBUG / ALLOWED_HOSTS 均来自环境变量（带默认回退）
-- STATIC_ROOT = BASE_DIR / 'static' （已存在静态目录）
+## 切换到生产数据库 (PostgreSQL 示例)
+1. 安装驱动：
+```bash
+uv add psycopg2-binary
+```
+2. 修改 `django_chatbot/settings.py` 中 `DATABASES`：
+```python
+DATABASES = {
+  'default': {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.getenv('PG_NAME','takagi'),
+    'USER': os.getenv('PG_USER','takagi'),
+    'PASSWORD': os.getenv('PG_PASSWORD',''),
+    'HOST': os.getenv('PG_HOST','127.0.0.1'),
+    'PORT': os.getenv('PG_PORT','5432'),
+  }
+}
+```
+3. 新增相关环境变量并执行迁移：
+```bash
+uv run python manage.py migrate
+```
 
-## 对话与摘要
-- 全局内存 `messages` 里按 `userid` 分片。
-- 超过 `UserSetting.generate_summary_num * 2` 条（因为一问一答），触发 `generate_summary`：
-  1. 发送 `summary_cmd` （来自 `BotSetting`）
-  2. 用新摘要替换历史大段上下文
-
-## 生产部署简要建议
-- 设置 `DJANGO_DEBUG=False`
-- 使用 `uv lock --upgrade` 定期升级安全补丁
-- 使用 `gunicorn` 或 `uvicorn` + 反向代理 (nginx/caddy)
-- 配置持久数据库（PostgreSQL 等）并修改 `DATABASES`
-- 将 `OPENAI_API_KEY` 放入安全的环境变量管理（如 systemd EnvironmentFile / k8s Secret）
-
-## 常见问题
-1. 403 / CSRF 相关：确保模板中表单含 `{% csrf_token %}`。
-2. OpenAI 调用失败：
-  - 优先使用后台 BotSetting.apikey
-  - 否则回退 `.env` 的 `OPENAI_API_KEY`
-  - 可用 `OPENAI_BASE_URL` 指向代理；无代理请留空。
-3. 大量并发导致上下文错乱：当前内存模式非线程安全，生产可改为 Redis / 数据库存储最近 N 条。
-
-## 开发工具
-使用 ruff 进行基础格式与导入整理：
+## 开发辅助
+代码质量：
 ```bash
 uv run ruff check .
 uv run ruff format .
+```
+交互调试：
+```bash
+uv run python manage.py shell
 ```
 
 ## 许可证

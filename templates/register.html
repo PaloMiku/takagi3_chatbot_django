@@ -1,125 +1,66 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}注册账号{% endblock %}
+{% block title %}创建账号{% endblock %}
 
 {% block bootstrap_css %}{% endblock %}
 {% block bootstrap_scripts %}{% endblock %}
 
 {% block styles %}
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<style>
-/* ========= 基础变量 ========= */
-:root { --auth-max-width:405px; --auth-inner-hpad:40px; --auth-radius:24px; --auth-input-radius:16px; --auth-fs-base:15px; --auth-fs-small:13px; --auth-label-fs:14px; --auth-gap:18px; }
-
-/* ========= 布局 ========= */
-body{background:linear-gradient(135deg,#eef2f7,#d9e2ec);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}
-.auth-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px;}
-.auth-card{width:100%;max-width:var(--auth-max-width);background:#fff;border-radius:var(--auth-radius);box-shadow:0 16px 32px rgba(0,0,0,.1);position:relative;overflow:hidden;}
-.auth-header{padding:36px var(--auth-inner-hpad) 14px;}
-.auth-title{margin:0;font-size:32px;font-weight:700;color:#1e293b;letter-spacing:.5px;}
-.auth-sub{font-size:var(--auth-fs-small);color:#64748b;margin-top:10px;}
-form{padding:8px 0 36px;}
-.form-inner{width:calc(100% - (var(--auth-inner-hpad)*2));max-width:300px;margin:0 var(--auth-inner-hpad);}
-
-/* ========= 表单元素 ========= */
-.form-group{margin-bottom:var(--auth-gap);}
-label{font-weight:600;font-size:var(--auth-label-fs);letter-spacing:.3px;color:#334155;display:block;margin-bottom:8px;}
-.form-control{border:1px solid #cbd5e1;border-radius:var(--auth-input-radius);padding:12px 14px;font-size:var(--auth-fs-base);line-height:1.3;transition:.2s;background:#fff;width:60%;}
-.form-control:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.25);} 
-
-/* 双列验证码 */
-.dual-inline{display:flex;gap:8px;}
-.dual-inline .form-control{flex:1;}
-
-/* ========= 按钮 ========= */
-.btn{display:inline-flex;align-items:center;justify-content:center;font-weight:600;border:none;border-radius:var(--auth-input-radius);cursor:pointer;transition:.25s;font-size:var(--auth-fs-base);height:48px;}
-.btn-primary{background:linear-gradient(90deg,#6366f1,#4f46e5);color:#fff;width:100%;box-shadow:0 4px 14px -2px rgba(99,102,241,.5);} 
-.btn-primary:hover{filter:brightness(1.05);} 
-.btn-secondary{background:#eef2f7;color:#334155;padding:0 18px;font-size:14px;border:1px solid #cbd5e0;}
-.btn-secondary:disabled{opacity:.55;cursor:not-allowed;}
-
-/* ========= 反馈 & 附加 ========= */
-.alert{border-radius:var(--auth-input-radius);padding:12px 16px;font-size:14px;display:flex;gap:10px;align-items:center;margin-bottom:12px;}
-.alert-danger{background:#ffe5e9;color:#b42318;border:1px solid #f8b4b4;}
-.switch-link{text-align:center;margin-top:20px;font-size:14px;}
-.switch-link a{color:#4f46e5;font-weight:600;text-decoration:none;}
-.switch-link a:hover{text-decoration:underline;}
-
-/* 密码强度 */
-.pwd-meter{height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden;margin-top:6px;}
-.pwd-meter-bar{height:100%;width:0;background:linear-gradient(90deg,#f56565,#ecc94b,#48bb78,#4299e1,#805ad5);transition:width .3s;}
-.pwd-hint{font-size:12px;color:#64748b;margin-top:4px;}
-.code-sent{font-size:12px;color:#2f855a;margin-top:6px;display:none;}
-a.inline-link{font-size:13px;margin-left:8px;color:#4f46e5;}
-/* ========= 响应式 ========= */
-@media (max-width:520px){
-  :root{--auth-inner-hpad:32px;}
-  .auth-header{padding:32px var(--auth-inner-hpad) 10px;}
-  .auth-title{font-size:28px;}
-  .form-inner{max-width:100%;}
-}
-@media (max-width:420px){
-  :root{--auth-inner-hpad:22px;--auth-fs-base:14px;--auth-label-fs:13px;--auth-gap:16px;}
-  .auth-card{border-radius:20px;}
-  .auth-header{padding:28px var(--auth-inner-hpad) 8px;}
-  .auth-title{font-size:26px;}
-  .btn{height:46px;font-size:var(--auth-fs-base);} 
-  .dual-inline{flex-direction:column;}
-  .dual-inline .btn-secondary{width:100%;height:44px;margin-top:6px;}
-}
-@media (max-width:340px){
-  :root{--auth-inner-hpad:16px;--auth-fs-base:13px;--auth-label-fs:12px;}
-  .auth-title{font-size:22px;line-height:1.15;word-break:break-word;}
-  .btn{height:44px;}
-}
-@media (prefers-reduced-motion:reduce){
-  *{transition:none !important;animation:none !important;}
-}
-</style>
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="auth-wrapper">
   <div class="auth-card">
     <div class="auth-header">
-      <h1 class="auth-title">创建账号</h1>
-      <p class="auth-sub">欢迎使用 Takagi AI，填写信息进行注册</p>
+      <h1 class="auth-title">创建您的账号</h1>
+      <p class="auth-sub">欢迎使用 Takagi AI</p>
     </div>
+    
+    {% if error_message %}
+      <div class="alert">{{ error_message }}</div>
+    {% endif %}
+
     <form method="post" id="register-form">
       {% csrf_token %}
-      {% if error_message %}
-        <div class="alert alert-danger">{{ error_message }}</div>
-      {% endif %}
-      <div class="form-inner">
-        <div class="form-group">
-          <label for="username">用户名</label>
-          <input type="text" class="form-control" id="username" name="username" value="{{ prefill_username|default:'' }}" required autocomplete="username">
-        </div>
-        <div class="form-group">
-          <label for="email">邮箱</label>
-          <div class="dual-inline">
-            <input type="email" class="form-control" id="email" name="email" value="{{ prefill_email|default:'' }}" required autocomplete="email">
-            <button class="btn btn-secondary" type="button" id="send-code-btn">发送验证码</button>
-          </div>
-          <div class="code-sent" id="code-sent-msg">验证码已发送，请查收邮件</div>
-        </div>
-        <div class="form-group">
-          <label for="email_code">邮箱验证码</label>
-          <input type="text" class="form-control" id="email_code" name="email_code" maxlength="6" required>
-        </div>
-        <div class="form-group">
-          <label for="password1">密码</label>
-          <input type="password" class="form-control" id="password1" name="password1" required autocomplete="new-password">
-          <div class="pwd-meter"><div class="pwd-meter-bar" id="pwd-meter-bar"></div></div>
-          <div class="pwd-hint" id="pwd-hint">至少 8 位，包含字母和数字</div>
-        </div>
-        <div class="form-group">
-          <label for="password2">确认密码</label>
-          <input type="password" class="form-control" id="password2" name="password2" required autocomplete="new-password">
-        </div>
-        <button type="submit" class="btn btn-primary">注册</button>
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input type="text" class="form-control" id="username" name="username" value="{{ prefill_username|default:'' }}" required autocomplete="username">
       </div>
-      <div class="switch-link">已有账号？<a href="/login">点此登录</a></div>
+      
+      <div class="form-group">
+        <label for="email">邮箱</label>
+        <div class="dual-inline">
+          <input type="email" class="form-control" id="email" name="email" value="{{ prefill_email|default:'' }}" required autocomplete="email">
+          <button class="btn btn-secondary" type="button" id="send-code-btn">发送验证码</button>
+        </div>
+        <div class="code-sent" id="code-sent-msg">验证码已发送，请查收。</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="email_code">邮箱验证码</label>
+        <input type="text" class="form-control" id="email_code" name="email_code" maxlength="6" required>
+      </div>
+      
+      <div class="form-group password-group">
+        <label for="password">密码</label>
+        <input type="password" class="form-control" id="password" name="password1" required autocomplete="new-password">
+        <span class="pwd-toggle" id="pwd-toggle">显示</span>
+        <div class="pwd-meter"><div class="pwd-meter-bar" id="pwd-meter-bar"></div></div>
+        <div class="pwd-hint" id="pwd-hint">至少 8 位，包含字母和数字。</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="password2">确认密码</label>
+        <input type="password" class="form-control" id="password2" name="password2" required autocomplete="new-password">
+      </div>
+      
+      <button type="submit" class="btn btn-primary">立即注册</button>
+      
+      <div class="switch-link">
+        已有账号？ <a href="{% url 'login' %}">点此登录</a>
+      </div>
     </form>
   </div>
 </div>
@@ -127,67 +68,170 @@ a.inline-link{font-size:13px;margin-left:8px;color:#4f46e5;}
 
 {% block scripts %}
 <script defer>
-  const pwd1 = document.getElementById('password1');
-  const bar = document.getElementById('pwd-meter-bar');
-  const hint = document.getElementById('pwd-hint');
-  function assess(v){
-    let score=0;
-    if(v.length>=8) score++;
-    if(/[a-z]/.test(v)&&/[A-Z]/.test(v)) score++;
-    if(/\d/.test(v)) score++;
-    if(/[^\w\s]/.test(v)) score++;
-    if(v.length>=12) score++;
-    return score; }
-  pwd1.addEventListener('input',()=>{
-    const v=pwd1.value;const s=assess(v);const percent=(s/5)*100;bar.style.width=percent+'%';
-    const levels=['弱','较弱','一般','较强','很强'];
-    hint.textContent = v?('密码强度: '+levels[s-1]||'弱'):'至少 8 位，包含字母和数字';
-    schedulePwdValidate();
-  });
-  // 密码内置验证 AJAX 防抖
-  let pwdTimer=null;
-  function schedulePwdValidate(){
-    if(pwdTimer) clearTimeout(pwdTimer);
-    pwdTimer=setTimeout(doPwdValidate,400);
-  }
-  function doPwdValidate(){
-    const v=pwd1.value; if(!v) return;
-    const formData=new URLSearchParams();
-    formData.append('password',v);
-    formData.append('username',document.getElementById('username').value.trim());
-    formData.append('email',emailInput.value.trim());
-    fetch('/register/pwd_validate',{method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken')},body:formData})
-      .then(r=>r.json()).then(d=>{
-        if(!d.ok){
-          hint.textContent='密码问题: '+d.errors.join(' / ');
-          hint.style.color='#b42318';
-        } else {
-          hint.textContent='密码强度: '+d.level;
-          hint.style.color='#2f855a';
+document.addEventListener('DOMContentLoaded', function() {
+    const pwdInput = document.getElementById('password');
+    const pwdMeterBar = document.getElementById('pwd-meter-bar');
+    const pwdHint = document.getElementById('pwd-hint');
+    const usernameInput = document.getElementById('username');
+    const emailInput = document.getElementById('email');
+
+    function assessPassword(v) {
+        let score = 0;
+        if (v.length >= 8) score++;
+        if (/[a-z]/.test(v) && /[A-Z]/.test(v)) score++;
+        if (/\d/.test(v)) score++;
+        if (/[^\w\s]/.test(v)) score++;
+        if (v.length >= 12) score++;
+        return score;
+    }
+
+    function updatePasswordStrengthUI(score, text = null) {
+        const percent = (score / 5) * 100;
+        pwdMeterBar.style.width = percent + '%';
+        
+        pwdMeterBar.classList.remove('strength-1', 'strength-2', 'strength-3', 'strength-4');
+        if (score > 0) {
+            pwdMeterBar.classList.add(`strength-${Math.min(score, 4)}`);
         }
-      }).catch(()=>{});
-  }
-  const sendBtn=document.getElementById('send-code-btn');
-  const emailInput=document.getElementById('email');
-  const sentMsg=document.getElementById('code-sent-msg');
-  let countdown=0;let timer=null;
-  function tick(){ if(countdown<=0){clearInterval(timer);sendBtn.disabled=false;sendBtn.textContent='发送验证码';return;} sendBtn.textContent='重新发送('+countdown+'s)'; countdown--; }
-  // 邮箱格式正则
-  const emailRegex=/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-  // 发送按钮防抖
-  let emailSendPending=false;
-  sendBtn.addEventListener('click',()=>{
-    if(emailSendPending) return; // 防抖
-    const email=emailInput.value.trim();
-    if(!email){alert('请输入邮箱');return;}
-    if(!emailRegex.test(email)){alert('邮箱格式不正确');return;}
-    emailSendPending=true;
-    sendBtn.disabled=true;sendBtn.textContent='发送中...';
-    fetch('/register/send_code',{method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken'),'Content-Type':'application/x-www-form-urlencoded'},body:'email='+encodeURIComponent(email)})
-      .then(r=>r.json()).then(d=>{ if(d.ok){sentMsg.style.display='block';countdown=60;tick(); timer=setInterval(tick,1000);} else {alert(d.error||'发送失败'); sendBtn.disabled=false; sendBtn.textContent='发送验证码';}})
-      .catch(()=>{alert('网络错误'); sendBtn.disabled=false; sendBtn.textContent='发送验证码';})
-      .finally(()=>{setTimeout(()=>{emailSendPending=false;},600);});
-  });
-  function getCookie(name){let cookieValue=null;if(document.cookie && document.cookie!== ''){const cookies=document.cookie.split(';');for(let i=0;i<cookies.length;i++){const cookie=cookies[i].trim();if(cookie.substring(0,name.length+1)===(name+'=')){cookieValue=decodeURIComponent(cookie.substring(name.length+1));break;}}}return cookieValue;}
+
+        if (text) {
+            pwdHint.textContent = text;
+            pwdHint.style.color = '';
+        } else {
+            const levels = ['很弱', '较弱', '一般', '较强', '非常强'];
+            pwdHint.textContent = pwdInput.value ? ('密码强度: ' + (levels[score-1] || '很弱')) : '至少 8 位，包含字母和数字。';
+            pwdHint.style.color = '';
+        }
+    }
+
+    let pwdValidationTimer = null;
+    pwdInput.addEventListener('input', () => {
+        const value = pwdInput.value;
+        const score = assessPassword(value);
+        updatePasswordStrengthUI(score);
+        
+        clearTimeout(pwdValidationTimer);
+        pwdValidationTimer = setTimeout(validatePasswordWithBackend, 400);
+    });
+
+    function validatePasswordWithBackend() {
+        const password = pwdInput.value;
+        if (!password) return;
+
+        const formData = new URLSearchParams();
+        formData.append('password', password);
+        formData.append('username', usernameInput.value.trim());
+        formData.append('email', emailInput.value.trim());
+
+        fetch('/register/pwd_validate', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) {
+                pwdHint.textContent = '密码问题: ' + data.errors.join(' / ');
+                pwdHint.style.color = 'var(--color-error)';
+            } else {
+                updatePasswordStrengthUI(data.score, '密码强度: ' + data.level);
+                pwdHint.style.color = '#16a34a';
+            }
+        }).catch(() => { /* Gracefully handle fetch errors */ });
+    }
+
+    const sendCodeBtn = document.getElementById('send-code-btn');
+    const codeSentMsg = document.getElementById('code-sent-msg');
+    let countdown = 0;
+    let countdownTimer = null;
+
+    function updateCountdown() {
+        if (countdown <= 0) {
+            clearInterval(countdownTimer);
+            sendCodeBtn.disabled = false;
+            sendCodeBtn.textContent = '发送验证码';
+            return;
+        }
+        sendCodeBtn.textContent = `重新发送(${countdown}s)`;
+        countdown--;
+    }
+
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    let isSendingCode = false;
+
+    sendCodeBtn.addEventListener('click', () => {
+        if (isSendingCode) return;
+
+        const email = emailInput.value.trim();
+        if (!email) {
+            alert('请输入邮箱地址。');
+            return;
+        }
+        if (!emailRegex.test(email)) {
+            alert('邮箱格式不正确，请检查。');
+            return;
+        }
+
+        isSendingCode = true;
+        sendCodeBtn.disabled = true;
+        sendCodeBtn.textContent = '发送中...';
+
+        fetch('/register/send_code', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'email=' + encodeURIComponent(email)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                codeSentMsg.style.display = 'block';
+                countdown = 60;
+                updateCountdown();
+                countdownTimer = setInterval(updateCountdown, 1000);
+            } else {
+                alert(data.error || '验证码发送失败，请稍后再试。');
+                sendCodeBtn.disabled = false;
+                sendCodeBtn.textContent = '发送验证码';
+            }
+        })
+        .catch(() => {
+            alert('网络请求失败，请检查您的网络连接。');
+            sendCodeBtn.disabled = false;
+            sendCodeBtn.textContent = '发送验证码';
+        })
+        .finally(() => {
+            setTimeout(() => { isSendingCode = false; }, 600);
+        });
+    });
+
+    const pwdToggle = document.getElementById('pwd-toggle');
+    pwdToggle.addEventListener('click', () => {
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            pwdToggle.textContent = '隐藏';
+        } else {
+            pwdInput.type = 'password';
+            pwdToggle.textContent = '显示';
+        }
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
 </script>
 {% endblock %}

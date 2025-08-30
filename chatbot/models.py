@@ -35,10 +35,8 @@ class UserSetting(models.Model):
     user_setting_option_10 = models.TextField(blank=True, null=True)
     isBan = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    # 用户自定义 API Key / Base URL（优先级高于全局 BotSetting）
     user_api_key = models.TextField(blank=True, null=True)
     user_base_url = models.TextField(blank=True, null=True)
-    # 自定义头像链接（优先于邮箱生成的头像）
     avatar_url = models.TextField(blank=True, null=True)
 
     def __str__(self):

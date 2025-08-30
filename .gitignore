@@ -14,7 +14,7 @@ db.sqlite3
 # Django static (ignore all generated, keep admin)
 static/**
 !static/admin/
-
+staticfiles/**
 # uv
 uv.lock
 
