@@ -113,16 +113,5 @@ DATABASES = {
 uv run python manage.py migrate
 ```
 
-## 开发辅助
-代码质量：
-```bash
-uv run ruff check .
-uv run ruff format .
-```
-交互调试：
-```bash
-uv run python manage.py shell
-```
-
 ## 许可证
 MIT License. 详见 `LICENSE`。
