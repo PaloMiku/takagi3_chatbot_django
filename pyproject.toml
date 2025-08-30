@@ -12,7 +12,6 @@ dependencies = [
   "openai>=1.0.0,<2.0.0",
   "channels>=4.0,<5.0",
   "daphne>=4.0,<5.0",
-  "dotenv>=0.9.9",
   "whitenoise>=6.6.0",
 ]
 
