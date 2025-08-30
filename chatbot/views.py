@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from openai import OpenAI, BadRequestError
 from django.conf import settings
 import os
@@ -8,6 +8,14 @@ from django.contrib.auth.models import User
 from .models import Chat, UserSetting, BotSetting, Message
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.core.cache import cache
+from django.core.mail import send_mail
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+import random
+import string
 
 #生成摘要的命令
 summary_cmd = ""
@@ -130,6 +138,8 @@ def chatbot(request):
     else:
         # 兼容旧 Chat 表：仍用于显示历史（后续可改用 Message）
         chats = Chat.objects.filter(user=request.user).order_by('created_at')
+    # 确保有 UserSetting 以便模板访问 user.usersetting
+    UserSetting.objects.get_or_create(user=user)
 
     if request.method == 'POST':
         message = request.POST.get('message')
@@ -155,25 +165,124 @@ def login(request):
 
 def register(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password1 = request.POST['password1']
-        password2 = request.POST['password2']
+        username = request.POST.get('username','').strip()
+        email = request.POST.get('email','').strip().lower()
+        password1 = request.POST.get('password1','')
+        password2 = request.POST.get('password2','')
+        code = request.POST.get('email_code','').strip()
 
-        if password1 == password2:
-            try:
-                user = User.objects.create_user(username, email, password1)
-                user.save()
-                UserSetting.objects.create(user=user)
-                auth.login(request, user)
-                return redirect('chatbot')
-            except:
-                error_message = '创建帐户出错'
-                return render(request, 'register.html', {'error_message': error_message})
-        else:
-            error_message = '密码不匹配'
-            return render(request, 'register.html', {'error_message': error_message})
+        ctx = {
+            'prefill_username': username,
+            'prefill_email': email,
+        }
+
+        # 基本校验
+        if not username or not email:
+            ctx['error_message'] = '用户名和邮箱必填'
+            return render(request, 'register.html', ctx)
+        if password1 != password2:
+            ctx['error_message'] = '两次密码不一致'
+            return render(request, 'register.html', ctx)
+        # 使用 Django 内置验证器收集错误
+        pwd_errors = []
+        try:
+            # 提供一个临时未保存用户对象用于相似度验证
+            temp_user = User(username=username, email=email)
+            validate_password(password1, user=temp_user)
+            # 额外：必须同时包含字母与数字（可选增强）
+            if not (any(c.isalpha() for c in password1) and any(c.isdigit() for c in password1)):
+                pwd_errors.append('密码需同时包含字母与数字')
+        except ValidationError as e:
+            pwd_errors.extend(e.messages)
+        if pwd_errors:
+            ctx['error_message'] = ' / '.join(pwd_errors)
+            return render(request, 'register.html', ctx)
+        cache_key = f'reg_email_code:{email}'
+        saved_code = cache.get(cache_key)
+        attempt_key = f'reg_email_code_attempts:{email}'
+        if not saved_code:
+            ctx['error_message'] = '验证码已过期，请重新发送'
+            return render(request, 'register.html', ctx)
+        if saved_code != code:
+            attempts = cache.get(attempt_key, 0) + 1
+            # 记录 5 分钟窗口内错误次数
+            cache.set(attempt_key, attempts, 300)
+            if attempts >= 5:
+                # 保护：失效旧验证码，需重新发送
+                cache.delete(cache_key)
+                ctx['error_message'] = '验证码错误次数过多，请重新发送'
+            else:
+                ctx['error_message'] = f'验证码错误，还可再尝试 {5 - attempts} 次'
+            return render(request, 'register.html', ctx)
+        if User.objects.filter(username=username).exists():
+            ctx['error_message'] = '用户名已存在'
+            return render(request, 'register.html', ctx)
+        if User.objects.filter(email=email).exists():
+            ctx['error_message'] = '邮箱已注册'
+            return render(request, 'register.html', ctx)
+        try:
+            user = User.objects.create_user(username=username, email=email, password=password1)
+            UserSetting.objects.create(user=user)
+            cache.delete(cache_key)
+            cache.delete(attempt_key)
+            auth.login(request, user)
+            return redirect('chatbot')
+        except Exception as e:
+            ctx['error_message'] = f'创建账户失败: {e}'
+            return render(request, 'register.html', ctx)
     return render(request, 'register.html')
+
+@require_POST
+def send_email_code(request):
+    email = request.POST.get('email','').strip().lower()
+    if not email:
+        return HttpResponseBadRequest('缺少邮箱')
+    # 限制频率：同邮箱 60 秒
+    freq_key = f'reg_email_code_freq:{email}'
+    if cache.get(freq_key):
+        return JsonResponse({'ok': False, 'error': '发送太频繁，请稍后再试'})
+    code = ''.join(random.choices(string.digits, k=6))
+    cache.set(f'reg_email_code:{email}', code, 300)  # 5 分钟有效
+    cache.set(freq_key, 1, 60)
+    # 重置错误尝试次数
+    cache.delete(f'reg_email_code_attempts:{email}')
+    try:
+        send_mail('注册验证码', f'您的验证码是: {code} (5分钟内有效)', settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': f'发送失败: {e}'})
+    return JsonResponse({'ok': True})
+
+@require_POST
+def password_validate(request):
+    """AJAX 密码验证：返回内置验证器错误与自定义强度信息。"""
+    pwd = request.POST.get('password','')
+    username = request.POST.get('username','')
+    email = request.POST.get('email','')
+    errors = []
+    if not pwd:
+        return JsonResponse({'ok': False, 'errors': ['密码为空']})
+    try:
+        temp_user = User(username=username or 'tempuser', email=email)
+        validate_password(pwd, user=temp_user)
+        if not (any(c.isalpha() for c in pwd) and any(c.isdigit() for c in pwd)):
+            errors.append('需同时包含字母与数字')
+    except ValidationError as e:
+        errors.extend(e.messages)
+        if not (any(c.isalpha() for c in pwd) and any(c.isdigit() for c in pwd)):
+            # 避免重复信息
+            msg = '需同时包含字母与数字'
+            if msg not in errors:
+                errors.append(msg)
+    # 简单强度评分与级别
+    score = 0
+    if len(pwd) >= 8: score += 1
+    if any(c.islower() for c in pwd) and any(c.isupper() for c in pwd): score += 1
+    if any(c.isdigit() for c in pwd): score += 1
+    if any(not c.isalnum() for c in pwd): score += 1
+    if len(pwd) >= 12: score += 1
+    levels = ['弱','较弱','一般','较强','很强']
+    level = levels[score-1] if score>0 else '极弱'
+    return JsonResponse({'ok': len(errors)==0, 'errors': errors, 'score': score, 'level': level})
 
 def logout(request):
     auth.logout(request)
@@ -188,6 +297,8 @@ def user_settings(request):
         model_name = request.POST.get('modelName', '').strip()
         user_api_key = request.POST.get('user_api_key', '').strip()
         user_base_url = request.POST.get('user_base_url', '').strip()
+        avatar_url = request.POST.get('avatar_url', '').strip()
+        nickname = request.POST.get('nickname', '').strip()
         # 简单校验
         if len(model_name) > 100:
             error = '模型名称过长'
@@ -195,6 +306,10 @@ def user_settings(request):
             user_setting.modelName = model_name or user_setting.modelName
             user_setting.user_api_key = user_api_key or None
             user_setting.user_base_url = user_base_url or None
+            user_setting.avatar_url = avatar_url or None
+            if nickname and len(nickname) <= 150 and nickname != request.user.username:
+                request.user.username = nickname
+                request.user.save(update_fields=['username'])
             user_setting.save()
             saved = True
     return render(request, 'user_settings.html', {
@@ -202,6 +317,31 @@ def user_settings(request):
         'saved': saved,
         'error': error,
     })
+
+@login_required
+@require_POST
+def user_settings_update(request):
+    """前端浮窗 AJAX 保存用户设置。返回 JSON。"""
+    user_setting, _ = UserSetting.objects.get_or_create(user=request.user)
+    model_name = request.POST.get('modelName', '').strip()
+    user_api_key = request.POST.get('user_api_key', '').strip()
+    user_base_url = request.POST.get('user_base_url', '').strip()
+    avatar_url = request.POST.get('avatar_url', '').strip()
+    nickname = request.POST.get('nickname', '').strip()
+    if model_name and len(model_name) > 100:
+        return JsonResponse({'ok': False, 'error': '模型名称过长'})
+    if nickname and len(nickname) > 150:
+        return JsonResponse({'ok': False, 'error': '昵称过长'})
+    if model_name:
+        user_setting.modelName = model_name
+    user_setting.user_api_key = user_api_key or None
+    user_setting.user_base_url = user_base_url or None
+    user_setting.avatar_url = avatar_url or None
+    user_setting.save()
+    if nickname and nickname != request.user.username:
+        request.user.username = nickname
+        request.user.save(update_fields=['username'])
+    return JsonResponse({'ok': True, 'nickname': request.user.username, 'avatar': user_setting.avatar_url})
 
 def generate_summary(user, conversation_id, summary_cmd_local, client, current_send_chat, user_setting):
     """生成摘要文本。current_send_chat 已含上下文。"""

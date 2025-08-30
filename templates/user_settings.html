@@ -9,6 +9,10 @@
   <form method="post">
     {% csrf_token %}
     <div class="mb-3">
+      <label class="form-label">昵称</label>
+      <input name="nickname" class="form-control" value="{{ request.user.username }}" maxlength="150" />
+    </div>
+    <div class="mb-3">
       <label class="form-label">模型名称</label>
       <input name="modelName" class="form-control" value="{{ user_setting.modelName }}" placeholder="例如 gpt-3.5-turbo 或 deepseek-chat" />
     </div>
@@ -19,6 +23,11 @@
     <div class="mb-3">
       <label class="form-label">自定义 Base URL (可选)</label>
       <input name="user_base_url" class="form-control" value="{{ user_setting.user_base_url }}" placeholder="https://api.openai.com/v1" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">头像图片 URL (可选)</label>
+      <input name="avatar_url" class="form-control" value="{{ user_setting.avatar_url }}" placeholder="https://.../avatar.png" />
+      <small class="form-text text-muted">留空则继续使用邮箱生成的默认头像。</small>
     </div>
     <p class="text-muted small">提示：prompt 不可在此页面修改。如需全局摘要指令请到后台 BotSetting。</p>
     <button class="btn btn-primary" type="submit">保存</button>

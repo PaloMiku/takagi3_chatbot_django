@@ -49,6 +49,19 @@ OPENAI_BASE_URL = _get_env('OPENAI_BASE_URL')  # 例如自建代理或 Azure End
 OPENAI_DEFAULT_MODEL = _get_env('OPENAI_MODEL_DEFAULT', 'gpt-3.5-turbo')
 # 每次构造上下文的近似 token 上限（粗略估算用字符长度换算）
 TOKEN_CONTEXT_LIMIT = int(_get_env('TOKEN_CONTEXT_LIMIT', '3000'))
+# 邮件发送（注册验证码）相关配置（在 .env 中设置）。
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = _get_env('EMAIL_HOST', '')
+EMAIL_PORT = int(_get_env('EMAIL_PORT', '465'))
+EMAIL_HOST_USER = _get_env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = _get_env('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = _get_env('EMAIL_USE_TLS', 'True', cast=lambda v: v.lower() in {'1','true','yes'})
+EMAIL_USE_SSL = _get_env('EMAIL_USE_SSL', 'False', cast=lambda v: v.lower() in {'1','true','yes'})
+DEFAULT_FROM_EMAIL = _get_env('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@example.com')
+
+if not EMAIL_HOST or not EMAIL_HOST_USER:
+    # 回退：开发环境缺少配置时使用控制台打印，避免启动报错
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # SECURE_SSL_REDIRECT = True
 # SECURE_HSTS_SECONDS = 2
 # SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -63,13 +76,17 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    # 注意: 为了确保使用 Channels 提供的 runserver (支持 WebSocket)，
+    # 需让 channels 的 management command 在 django.contrib.staticfiles 之前被注册。
+    'daphne',
+    'channels',
     'django.contrib.staticfiles',
     'chatbot',
-    'channels',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -156,6 +173,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # 收集后的目标目录（部署 collectstatic 使用）
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'

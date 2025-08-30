@@ -2,94 +2,91 @@
 {% load static %}
 {% block title %}登录至AI高木{% endblock %}
 
+{% block bootstrap_css %}{% endblock %}
+{% block bootstrap_scripts %}{% endblock %}
+
 {% block styles %}
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
-  body {
-    background-color: #f0f0f0;
+  :root { --auth-max-width:475px; --auth-inner-hpad:40px; --auth-radius:24px; --auth-input-radius:16px; --auth-fs-base:15px; --auth-fs-small:13px; --auth-label-fs:14px; --auth-gap:18px; }
+  body{background:linear-gradient(135deg,#eef2f7,#d9e2ec);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}
+  .auth-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px;}
+  .auth-card{width:100%;max-width:var(--auth-max-width);background:#fff;border-radius:var(--auth-radius);box-shadow:0 16px 32px rgba(0,0,0,.1);position:relative;overflow:hidden;}
+  .auth-header{padding:36px var(--auth-inner-hpad) 14px;}
+  .auth-title{margin:0;font-size:32px;font-weight:700;color:#1e293b;letter-spacing:.5px;}
+  .auth-sub{font-size:var(--auth-fs-small);color:#64748b;margin-top:10px;}
+  form{padding:8px 0 36px;}
+  .form-inner{width:calc(100% - (var(--auth-inner-hpad)*2));max-width:370px;margin:0 var(--auth-inner-hpad);}  
+  .form-group{margin-bottom:var(--auth-gap);position:relative;}
+  label{font-weight:600;font-size:var(--auth-label-fs);letter-spacing:.3px;color:#334155;display:block;margin-bottom:8px;}
+  .form-control{border:1px solid #cbd5e1;border-radius:var(--auth-input-radius);padding:12px 14px;font-size:var(--auth-fs-base);line-height:1.3;transition:.2s;background:#fff;width:60%;}
+  .form-control:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.25);}  
+  .btn{display:inline-flex;align-items:center;justify-content:center;font-weight:600;border:none;border-radius:var(--auth-input-radius);cursor:pointer;transition:.25s;font-size:var(--auth-fs-base);height:48px;}
+  .btn-primary{background:linear-gradient(90deg,#6366f1,#4f46e5);color:#fff;width:100%;box-shadow:0 4px 14px -2px rgba(99,102,241,.5);} 
+  .btn-primary:hover{filter:brightness(1.05);} 
+  .alert{border-radius:var(--auth-input-radius);padding:12px 16px;font-size:14px;display:flex;gap:10px;align-items:center;margin-bottom:12px;}
+  .alert-danger{background:#ffe5e9;color:#b42318;border:1px solid #f8b4b4;}
+  .switch-link{text-align:center;margin-top:20px;font-size:14px;}
+  .switch-link a{color:#4f46e5;font-weight:600;text-decoration:none;}
+  .switch-link a:hover{text-decoration:underline;}
+  .pwd-toggle{position:absolute;right:14px;top:48px;font-size:12px;cursor:pointer;color:#4f46e5;user-select:none;}
+  /* ========= 响应式 ========= */
+  @media (max-width:520px){
+    :root{--auth-inner-hpad:32px;}
+    .auth-header{padding:32px var(--auth-inner-hpad) 10px;}
+    .auth-title{font-size:28px;}
+    .form-inner{max-width:100%;}
   }
-  .login-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+  @media (max-width:420px){
+    :root{--auth-inner-hpad:22px;--auth-fs-base:14px;--auth-label-fs:13px;--auth-gap:16px;}
+    .auth-card{border-radius:20px;}
+    .auth-header{padding:28px var(--auth-inner-hpad) 8px;}
+    .auth-title{font-size:26px;}
+    .btn{height:46px;font-size:var(--auth-fs-base);} 
   }
-  .card {
-    max-width: 400px;
+  @media (max-width:340px){
+    :root{--auth-inner-hpad:16px;--auth-fs-base:13px;--auth-label-fs:12px;}
+    .auth-title{font-size:22px;line-height:1.15;word-break:break-word;}
+    .btn{height:44px;}
   }
-  .card-header {
-    background-color: #007bff;
-    color: white;
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-  }
-  .card-body {
-    padding: 30px;
-  }
-  .form-group {
-    margin-bottom: 20px;
-  }
-  label {
-    font-weight: bold;
-    display: block;
-    margin-bottom: 5px;
-  }
-  input[type=text], input[type=password] {
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    padding: 10px;
-    font-size: 16px;
-    width: 100%;
-    box-sizing: border-box;
-    margin-bottom: 10px;
-  }
-  button[type=submit] {
-    background-color: #007bff;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    width: 100%;
-  }
-  button[type=submit]:hover {
-    background-color: #0062cc;
-  }
-  .alert-danger {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: 1px solid #f5c6cb;
-    border-radius: 4px;
-  }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;animation:none !important;} }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="login-container">
-  <div class="card">
-    <div class="card-header">登录至AI高木</div>
-    <div class="card-body">
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1 class="auth-title">登录</h1>
+      <p class="auth-sub">欢迎回来，请输入账号信息</p>
+    </div>
+    <form method="post">
+      {% csrf_token %}
       {% if error_message %}
-        <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+        <div class="alert alert-danger">{{ error_message }}</div>
       {% endif %}
-      <form method="post">
-        {% csrf_token %}
+      <div class="form-inner">
         <div class="form-group">
           <label for="username">用户名</label>
-          <input type="text" class="form-control" id="username" name="username" required>
+          <input type="text" class="form-control" id="username" name="username" required autofocus autocomplete="username">
         </div>
-        <div class="form-group">
+        <div class="form-group" style="position:relative;">
           <label for="password">密码</label>
-          <input type="password" class="form-control" id="password" name="password" required>
+          <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+          <span class="pwd-toggle" id="pwd-toggle">显示</span>
         </div>
-        <button type="submit">登录</button>
-        <a href="/register">注册账号</a>
-      </form>
-    </div>
+        <button type="submit" class="btn btn-primary">登录</button>
+      </div>
+      <div class="switch-link">还没有账号？<a href="/register">现在注册</a></div>
+    </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script defer>
+  const toggle=document.getElementById('pwd-toggle');
+  const pwd=document.getElementById('password');
+  toggle.addEventListener('click',()=>{if(pwd.type==='password'){pwd.type='text';toggle.textContent='隐藏';}else{pwd.type='password';toggle.textContent='显示';}});
+</script>
 {% endblock %}

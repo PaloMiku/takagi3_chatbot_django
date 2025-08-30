@@ -18,22 +18,7 @@
     --accent:#1e88ff;
     --scroll-thumb:rgba(0,0,0,.25);
   }
-  body.dark {
-    --header-bg:#0d2538;
-    --header-text:#f1f6fa;
-    --panel-bg:rgba(28,44,58,0.9);
-    --panel-border:rgba(255,255,255,0.08);
-    --panel-shadow:0 4px 16px -3px rgba(0,0,0,0.55);
-    --sent-bg:#2f6b3a;
-    --sent-text:#e6f9ec;
-    --recv-bg:#1f3242;
-    --recv-text:#e2edf5;
-    --bubble-shadow:0 2px 6px rgba(0,0,0,0.45);
-    --input-bg:rgba(25,38,50,0.85);
-    --accent:#4dabf7;
-    --scroll-thumb:rgba(255,255,255,.35);
-    background-color:#0a1823;
-  }
+  /* 已移除深色模式切换，如需恢复可重新添加 body.dark 变量覆盖 */
   body,
   html {
     height: 100%;
@@ -59,13 +44,25 @@
   .brand { font-size:18px; font-weight:600; letter-spacing:.5px; display:flex; align-items:center; gap:8px; }
   .brand img { width:34px; height:34px; object-fit:cover; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
   .header-spacer { flex:1; }
-  .icon-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.4); width:46px; height:46px; display:flex; align-items:center; justify-content:center; padding:6px; border-radius:14px; cursor:pointer; transition:.25s; position:relative; }
+  .icon-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.4); width:46px; height:46px; display:flex; align-items:center; justify-content:center; padding:6px; border-radius:14px; cursor:pointer; transition:.25s; position:relative; overflow:hidden; }
   .icon-btn img { width:28px; height:28px; }
+  /* 统一头像按钮内部图像尺寸与普通图标一致 */
+  .icon-btn.avatar-btn img { width:28px; height:28px; object-fit:cover; border-radius:8px; }
+  .icon-btn:focus-visible { outline:2px solid var(--header-text); outline-offset:2px; }
   .icon-btn:hover { background:rgba(255,255,255,0.3); transform:translateY(-2px); box-shadow:0 4px 10px -3px rgba(0,0,0,.35); }
   body.dark .icon-btn { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); }
   body.dark .icon-btn:hover { background:rgba(255,255,255,0.18); }
-  #themeToggleButton { font-size:22px; }
-  .user-avatar-small { width:42px; height:42px; border-radius:50%; object-fit:cover; box-shadow:0 2px 6px rgba(0,0,0,.3); border:2px solid rgba(255,255,255,.6); }
+  .user-avatar-small { width:28px; height:28px; border-radius:8px; object-fit:cover; box-shadow:0 2px 6px -2px rgba(0,0,0,.35); border:none; }
+  .avatar-menu { position:absolute; top:56px; right:0; min-width:190px; display:flex; flex-direction:column; gap:0; padding:8px 10px 10px; background:rgba(255,255,255,0.94); border:1px solid rgba(0,0,0,0.06); border-radius:18px; box-shadow:0 12px 32px -10px rgba(0,0,0,.35); backdrop-filter:blur(18px) saturate(160%); transform:translateY(10px) scale(.95); opacity:0; pointer-events:none; transition:.22s cubic-bezier(.45,.2,.2,1.1); z-index:320; font-size:14px; }
+  body.dark .avatar-menu { background:rgba(28,44,58,0.94); border-color:rgba(255,255,255,0.14); box-shadow:0 14px 40px -12px rgba(0,0,0,.7); }
+  .avatar-menu.open { transform:translateY(0) scale(1); opacity:1; pointer-events:auto; }
+  .avatar-menu a, .avatar-menu button { display:block; text-decoration:none; background:transparent; border:none; padding:8px 14px; border-radius:8px; color:#1e2732; cursor:pointer; text-align:left; line-height:1.28; letter-spacing:.15px; font-weight:400; position:relative; white-space:nowrap; font-family:inherit; }
+  body.dark .avatar-menu a, body.dark .avatar-menu button { color:#e3edf4; }
+  .avatar-menu a:hover, .avatar-menu button:hover { background:rgba(0,0,0,0.06); }
+  body.dark .avatar-menu a:hover, body.dark .avatar-menu button:hover { background:rgba(255,255,255,0.10); }
+  .avatar-menu a:focus-visible, .avatar-menu button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .avatar-menu .menu-divider { height:1px; width:100%; background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0.22), rgba(0,0,0,0)); margin:4px 0; }
+  body.dark .avatar-menu .menu-divider { background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.25), rgba(255,255,255,0)); }
 
   .chatHistory {
     width: clamp(300px,32vw,420px);
@@ -107,14 +104,8 @@
     line-height: 0;
   }
 
-  #logoutButton img,
-  #chatHistoryButton img,
-  #randomPlayerButton img {
-    width: 40px;
-    height: 40px;
-    display: block;
-    object-fit: contain;
-  }
+  /* 按钮内联 SVG 统一尺寸 */
+  .icon-btn svg { width:26px; height:26px; display:block; }
 
   /* 头像大小（AI头像） */
   .message-sender img {
@@ -172,9 +163,9 @@
   body.dark .responseMessage { background:linear-gradient(135deg, rgba(30,46,60,0.7), rgba(20,30,40,0.65)); }
   body.no-scroll-overlay { overflow:hidden; }
 
-  #themeToggleButton { background:transparent; border:none; padding:4px; cursor:pointer; line-height:0; color:var(--header-text); font-size:26px; }
+  /* #themeToggleButton 样式已删除 */
   #themeToggleButton:focus-visible { outline:2px solid var(--header-text); outline-offset:3px; }
-  @media (max-width: 820px) { .chatHistory { width:100%; top:58px; border-radius:0; height:calc(100% - 58px);} .responseMessage{ bottom:26%;} #logoutButton img,#chatHistoryButton img,#randomPlayerButton img{ width:30px;height:30px;} .card-header{ gap:6px; padding:6px 10px;} }
+  @media (max-width: 820px) { .chatHistory { width:100%; top:58px; border-radius:0; height:calc(100% - 58px);} .responseMessage{ bottom:26%;} .card-header{ gap:6px; padding:6px 10px;} .icon-btn{ width:42px; height:42px; } .icon-btn svg{ width:22px; height:22px;} }
   @media (max-width: 600px){ .message-sender img{ width:38px; height:38px; border-radius:10px; } }
 </style>
 {% endblock %}
@@ -191,11 +182,31 @@
         <span>欢迎, {{ user.username }}</span>
       </div>
       <div class="header-spacer"></div>
-      <button id="chatHistoryButton" class="icon-btn" aria-expanded="false" aria-controls="chatHistory" aria-label="history"><img src="{% static 'img/icon/msg.webp' %}" alt="历史"></button>
-      <button id="randomPlayerButton" class="icon-btn" aria-label="player"><img src="{% static 'img/icon/randomPlayer.webp' %}" alt="随机"></button>
-      <button id="themeToggleButton" class="icon-btn" title="切换主题" aria-label="toggle theme">🌓</button>
-      <button id="logoutButton" class="icon-btn" aria-label="logout"><img src="{% static 'img/icon/logout.webp' %}" alt="退出"></button>
-      <img class="user-avatar-small" src="{{ user.email|cravatar:80 }}" alt="avatar">
+      <button id="chatHistoryButton" class="icon-btn" aria-expanded="false" aria-controls="chatHistory" aria-label="历史" title="历史">
+        <svg viewBox="0 0 24 24" role="img" aria-hidden="true"><path fill="currentColor" d="M4 4h16v12H5.17L4 17.17V4m0-2a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Z"/></svg>
+      </button>
+      <div class="avatar-wrapper" style="position:relative;">
+        <button id="avatarMenuToggle" class="icon-btn avatar-btn" aria-haspopup="true" aria-expanded="false" aria-label="用户菜单">
+          <img class="user-avatar-small" src="{% if user.usersetting.avatar_url %}{{ user.usersetting.avatar_url }}{% else %}{{ user.email|cravatar:80 }}{% endif %}" alt="avatar">
+        </button>
+        <div id="avatarMenu" class="avatar-menu" role="menu" aria-hidden="true">
+          <button type="button" id="openInlineSettings" role="menuitem" class="menu-item-text" title="用户设置" aria-label="用户设置">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <!-- gear icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09c0 .69.4 1.31 1 1.51.61.21 1.28.05 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.69 0 1.31.4 1.51 1H21a2 2 0 0 1 0 4h-.09c-.69 0-1.31.4-1.51 1Z"/></svg>
+              <span>用户设置</span>
+            </span>
+          </button>
+          <div class="menu-divider" role="separator"></div>
+          <button id="avatarLogoutLink" type="button" role="menuitem" class="menu-item-text" title="退出" aria-label="退出">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <!-- logout icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span>退出登录</span>
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
     {% else %}
     <div class="card-header bg-primary text-white"><a style="color: yellow" href="login">Login</a> <a
@@ -253,6 +264,47 @@
       </div>
     </div>
   </form>
+  <!-- 内联用户设置浮窗 -->
+  <div id="inlineUserSettings" style="position:fixed; top:70px; left:50%; transform:translateX(-50%); width:min(560px,92%); background:rgba(255,255,255,0.95); border:1px solid rgba(0,0,0,0.1); border-radius:18px; padding:18px 20px 20px; box-shadow:0 18px 44px -12px rgba(0,0,0,.35); backdrop-filter:blur(14px); z-index:400; display:none;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+      <h5 style="margin:0; font-weight:600;">用户设置</h5>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button type="button" id="closeInlineSettings" style="background:transparent;border:none;cursor:pointer;" aria-label="关闭">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <form id="inlineSettingsForm">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+      <div class="form-group mb-2">
+        <label class="small mb-1">昵称</label>
+        <input name="nickname" class="form-control form-control-sm" value="{{ user.username }}" maxlength="150" />
+      </div>
+      <div class="form-group mb-2">
+        <label class="small mb-1">模型名称</label>
+        <input name="modelName" class="form-control form-control-sm" value="{{ user.usersetting.modelName|default:'' }}" placeholder="deepseek-chat" />
+      </div>
+      <div class="form-row">
+        <div class="form-group col-md-6 mb-2">
+          <label class="small mb-1">自定义 API Key</label>
+          <input name="user_api_key" class="form-control form-control-sm" value="{{ user.usersetting.user_api_key|default:'' }}" placeholder="sk-..." />
+        </div>
+        <div class="form-group col-md-6 mb-2">
+          <label class="small mb-1">自定义 Base URL</label>
+          <input name="user_base_url" class="form-control form-control-sm" value="{{ user.usersetting.user_base_url|default:'' }}" placeholder="https://api.deepseek.com/v1" />
+        </div>
+      </div>
+      <div class="form-group mb-2">
+        <label class="small mb-1">头像图片 URL</label>
+        <input name="avatar_url" class="form-control form-control-sm" value="{{ user.usersetting.avatar_url|default:'' }}" placeholder="https://.../avatar.png" />
+        <small class="form-text text-muted">留空则使用邮箱自动生成头像。</small>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+        <button type="submit" class="btn btn-sm btn-primary">保存</button>
+        <span id="inlineSettingMsg" class="small text-success" style="display:none;">已保存</span>
+      </div>
+    </form>
+  </div>
 </div>
 
 {% endblock %}
@@ -265,23 +317,6 @@
     const messageInput = document.querySelector('.message-input');
     const chatHistoryPanel = document.getElementById('chatHistory');
     const responsePanel = document.querySelector('.responseMessage');
-    const themeBtn = document.getElementById('themeToggleButton');
-
-    // 初始化主题
-    const savedTheme = localStorage.getItem('chatTheme');
-    if (savedTheme === 'dark') document.body.classList.add('dark');
-    updateThemeIcon();
-
-    function updateThemeIcon(){
-      if(!themeBtn) return;
-      const dark = document.body.classList.contains('dark');
-      themeBtn.textContent = dark ? '🌞' : '🌓';
-    }
-    themeBtn.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('chatTheme', document.body.classList.contains('dark') ? 'dark' : 'light');
-      updateThemeIcon();
-    });
 
     function scrollToBottom() {
       if (chatHistoryPanel.classList.contains('open')) {
@@ -344,7 +379,7 @@
       // 插入用户气泡
       const messageItem = document.createElement('li');
       messageItem.className = 'message sent';
-      messageItem.innerHTML = `<div class=\"message-text\" title=\"{{ user.username }}\"><div class=\"message-sender\"><img src=\"{{ user.email|cravatar:80 }}\" alt=\"{{ user.username }}\"></div><div class=\"message-content\"></div></div>`;
+  messageItem.innerHTML = `<div class=\"message-text\" title=\"{{ user.username }}\"><div class=\"message-sender\"><img src=\"{% if user.usersetting.avatar_url %}{{ user.usersetting.avatar_url }}{% else %}{{ user.email|cravatar:80 }}{% endif %}\" alt=\"{{ user.username }}\"></div><div class=\"message-content\"></div></div>`;
       messageItem.querySelector('.message-content').textContent = message;
       messagesList.appendChild(messageItem);
       // 创建 AI 回复占位
@@ -374,11 +409,78 @@
   document.body.classList.toggle('no-scroll-overlay', expanded);
     });
 
-    document.getElementById('logoutButton').addEventListener('click', (event) => {
-      event.preventDefault();
-      if (confirm('确认退出登录？')) {
-        window.location.href = 'logout';
+    // 头像菜单逻辑
+    const avatarToggle = document.getElementById('avatarMenuToggle');
+    const avatarMenu = document.getElementById('avatarMenu');
+    function closeAvatarMenu(){
+      if(!avatarMenu) return;
+      avatarMenu.classList.remove('open');
+      avatarMenu.setAttribute('aria-hidden','true');
+      avatarToggle.setAttribute('aria-expanded','false');
+    }
+    function openAvatarMenu(){
+      avatarMenu.classList.add('open');
+      avatarMenu.setAttribute('aria-hidden','false');
+      avatarToggle.setAttribute('aria-expanded','true');
+    }
+    if(avatarToggle){
+      avatarToggle.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(avatarMenu.classList.contains('open')) closeAvatarMenu(); else openAvatarMenu();
+      });
+    }
+    document.addEventListener('click', (e)=>{
+      if(avatarMenu && !avatarMenu.contains(e.target) && e.target !== avatarToggle){
+        closeAvatarMenu();
       }
+    });
+    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeAvatarMenu(); });
+
+    const logoutLink = document.getElementById('avatarLogoutLink');
+    if(logoutLink){
+      logoutLink.addEventListener('click', ()=>{
+        if(confirm('确认退出登录？')) window.location.href = 'logout';
+      });
+    }
+
+    // 内联设置浮窗逻辑
+    const inlinePanel = document.getElementById('inlineUserSettings');
+    const openInlineBtn = document.getElementById('openInlineSettings');
+    const closeInlineBtn = document.getElementById('closeInlineSettings');
+    const inlineForm = document.getElementById('inlineSettingsForm');
+    const inlineMsg = document.getElementById('inlineSettingMsg');
+    const gotoFull = document.getElementById('gotoFullSetting');
+    function openInline(){ inlinePanel.style.display='block'; }
+    function closeInline(){ inlinePanel.style.display='none'; }
+    if(openInlineBtn){ openInlineBtn.addEventListener('click', (e)=>{ e.stopPropagation(); closeAvatarMenu(); openInline(); }); }
+    if(closeInlineBtn){ closeInlineBtn.addEventListener('click', closeInline); }
+  if(gotoFull){ gotoFull.addEventListener('click', ()=>{ window.location.href = "{% url 'user_settings' %}"; }); }
+    inlineForm && inlineForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      const formData = new FormData(inlineForm);
+  fetch("{% url 'user_settings_update' %}", {method:'POST', body:formData}).then(r=>r.json()).then(d=>{
+        if(d.ok){
+          inlineMsg.style.display='inline';
+          setTimeout(()=>{ inlineMsg.style.display='none'; }, 2000);
+          // 更新用户名显示
+          if(d.nickname){
+            const brandSpan = document.querySelector('.brand span');
+            if(brandSpan) brandSpan.textContent = '欢迎, ' + d.nickname;
+          }
+          if(d.avatar){
+            const av = document.querySelector('#avatarMenuToggle img.user-avatar-small');
+            if(av) av.src = d.avatar;
+          }
+        } else {
+          inlineMsg.textContent = d.error || '保存失败';
+          inlineMsg.style.display='inline';
+          inlineMsg.classList.remove('text-success'); inlineMsg.classList.add('text-danger');
+          setTimeout(()=>{ inlineMsg.style.display='none'; inlineMsg.classList.remove('text-danger'); inlineMsg.classList.add('text-success'); inlineMsg.textContent='已保存'; }, 3000);
+        }
+      }).catch(()=>{
+        inlineMsg.textContent='网络错误'; inlineMsg.style.display='inline'; inlineMsg.classList.remove('text-success'); inlineMsg.classList.add('text-danger');
+        setTimeout(()=>{ inlineMsg.style.display='none'; inlineMsg.classList.remove('text-danger'); inlineMsg.classList.add('text-success'); inlineMsg.textContent='已保存'; }, 3000);
+      });
     });
   })();
 </script>

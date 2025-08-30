@@ -6,14 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="icon" href="{% static 'img/icon/icon.ico' %}">
     <title>{% block title %}{% endblock %}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  {% block bootstrap_css %}<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/bootstrap/5.3.8/css/bootstrap.min.css">{% endblock %}
     {% block styles %}{% endblock %}
   </head>
   <body>
     {% block content %}{% endblock %}
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  {% block bootstrap_scripts %}
+  <script src="https://s4.zstatic.net/ajax/libs/jquery/3.7.1/jquery.slim.min.js"></script>
+  <script src="https://s4.zstatic.net/ajax/libs/popper.js/2.11.8/umd/popper.min.js"></script>
+  <script src="https://s4.zstatic.net/ajax/libs/bootstrap/5.3.8/js/bootstrap.min.js"></script>
+  {% endblock %}
     {% block scripts %}{% endblock %}
   </body>
 </html>

@@ -1,10 +1,13 @@
+"""WebSocket consumer handling chat streaming with proper async ORM usage."""
+
 import json
+import os
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 from django.conf import settings
 from openai import AsyncOpenAI, BadRequestError
+from channels.db import database_sync_to_async
 from .models import UserSetting, BotSetting, Message
-import os
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -33,11 +36,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send_json({"error": "empty_message"})
             return
 
-        user_setting, _ = UserSetting.objects.get_or_create(user=user)
-        bot_setting = BotSetting.objects.first()
+        # ORM helpers (run in thread pool)
+        user_setting, _ = await database_sync_to_async(UserSetting.objects.get_or_create)(user=user)
+        bot_setting = await database_sync_to_async(lambda: BotSetting.objects.first())()
 
-        # 选择 API Key / base_url 优先级：user -> bot -> env
-        api_key = user_setting.user_api_key or (bot_setting.apikey if bot_setting and bot_setting.apikey else getattr(settings,'OPENAI_API_KEY', None) or os.getenv('OPENAI_API_KEY'))
+        api_key = (
+            user_setting.user_api_key
+            or (
+                bot_setting.apikey
+                if bot_setting and bot_setting.apikey
+                else getattr(settings, 'OPENAI_API_KEY', None)
+                or os.getenv('OPENAI_API_KEY')
+            )
+        )
         base_url = user_setting.user_base_url or getattr(settings, 'OPENAI_BASE_URL', None)
         if not api_key:
             await self.send_json({"error": "no_api_key"})
@@ -45,34 +56,46 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         client = AsyncOpenAI(api_key=api_key, base_url=base_url or None)
 
-        # conversation: 使用第一条 system 消息的 conversation_id
-        first_system = Message.objects.filter(user=user, role='system').order_by('created_at').first()
+        first_system = await database_sync_to_async(
+            lambda: Message.objects.filter(user=user, role='system').order_by('created_at').first()
+        )()
         if first_system:
             conversation_id = first_system.conversation_id
         else:
-            system_msg = Message.objects.create(user=user, role='system', content=user_setting.prompt)
+            system_msg = await database_sync_to_async(Message.objects.create)(
+                user=user, role='system', content=user_setting.prompt
+            )
             conversation_id = system_msg.conversation_id
 
-        # 记录用户消息
-        Message.objects.create(user=user, role='user', content=user_input, conversation_id=conversation_id)
+        # store user message
+        await database_sync_to_async(Message.objects.create)(
+            user=user, role='user', content=user_input, conversation_id=conversation_id
+        )
 
-        # 构造上下文
         token_limit = getattr(settings, 'TOKEN_CONTEXT_LIMIT', 3000)
-        qs = Message.objects.filter(user=user, conversation_id=conversation_id).order_by('-created_at')
+        messages_desc = await database_sync_to_async(
+            lambda: list(
+                Message.objects.filter(user=user, conversation_id=conversation_id).order_by('-created_at')
+            )
+        )()
         acc = 0
         ctx = []
-        for m in qs:
-            acc += m.tokens or 0
+        for m in messages_desc:  # descending
+            acc += (m.tokens or 0)
             if acc > token_limit:
                 break
             ctx.append(m)
         ctx.reverse()
         send_chat = [{"role": m.role, "content": m.content} for m in ctx]
 
-        model_name = (user_setting.modelName or getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-3.5-turbo')).strip()
+        model_name = (
+            user_setting.modelName or getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-3.5-turbo')
+        ).strip()
 
         try:
-            stream = await client.chat.completions.create(model=model_name, messages=send_chat, stream=True)
+            stream = await client.chat.completions.create(
+                model=model_name, messages=send_chat, stream=True
+            )
             full = []
             async for chunk in stream:
                 if not chunk.choices:
@@ -83,7 +106,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     await self.send_json({"delta": delta})
             final_text = ''.join(full).strip()
             if final_text:
-                Message.objects.create(user=user, role='assistant', content=final_text, conversation_id=conversation_id)
+                await database_sync_to_async(Message.objects.create)(
+                    user=user, role='assistant', content=final_text, conversation_id=conversation_id
+                )
             await self.send_json({"done": True})
         except BadRequestError as e:
             await self.send_json({"error": f"model_error: {e}"})

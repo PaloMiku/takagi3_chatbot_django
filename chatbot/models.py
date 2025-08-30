@@ -38,6 +38,8 @@ class UserSetting(models.Model):
     # 用户自定义 API Key / Base URL（优先级高于全局 BotSetting）
     user_api_key = models.TextField(blank=True, null=True)
     user_base_url = models.TextField(blank=True, null=True)
+    # 自定义头像链接（优先于邮箱生成的头像）
+    avatar_url = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f'{self.user.username}'
