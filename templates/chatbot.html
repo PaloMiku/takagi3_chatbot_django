@@ -131,8 +131,42 @@
                 <small class="form-text text-muted" style="font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; display: block;">留空则使用 Gravatar 邮箱头像。</small>
             </div>
             <div class="settings-footer">
+                <!-- 黄色修改密码按钮，放在保存上方（视觉上靠上），使用相同 btn 尺寸并加变体类 -->
+                <button type="button" id="openChangePwdInline" class="btn btn-primary btn-change-pwd">修改密码</button>
                 <button type="submit" class="btn btn-primary">保存更改</button>
                 <span id="inlineSettingMsg" class="save-msg">已保存</span>
+            </div>
+        </form>
+    </div>
+    <!-- Password change inline modal -->
+    <div id="inlineChangePwdModal" class="inline-settings-panel" style="display:none;">
+        <div class="settings-header">
+            <h5>修改密码</h5>
+            <button type="button" id="closeChangePwd" class="close-btn" aria-label="关闭">
+                <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form id="inlineChangePwdForm">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label>旧密码</label>
+                <input name="old_password" type="password" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input id="inlineNewPwd" name="new_password1" type="password" class="form-control" />
+                <div class="pwd-strength" id="inlinePwdStrength">
+                    <div class="bar"><i></i></div>
+                    <div class="level" id="inlinePwdStrengthText">强度：-</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>再次输入新密码</label>
+                <input name="new_password2" type="password" class="form-control" />
+            </div>
+            <div class="settings-footer">
+                <button type="submit" class="btn btn-primary">确认修改</button>
+                <span id="inlineChangePwdMsg" class="save-msg"></span>
             </div>
         </form>
     </div>
@@ -304,6 +338,11 @@
         if (inlinePanel) {
             inlinePanel.style.display = 'none';
         }
+        // 关闭修改密码浮窗并清理信息
+        if (changePwdModal) {
+            changePwdModal.style.display = 'none';
+            if (changePwdMsg) { changePwdMsg.textContent = ''; changePwdMsg.classList.remove('text-success','text-danger'); }
+        }
     }
 
     if (avatarToggle) {
@@ -339,9 +378,88 @@
         });
     }
 
+    // Inline change password modal logic
+    const openChangePwdBtn = document.getElementById('openChangePwdInline');
+    const changePwdModal = document.getElementById('inlineChangePwdModal');
+    const closeChangePwdBtn = document.getElementById('closeChangePwd');
+    const changePwdForm = document.getElementById('inlineChangePwdForm');
+    const changePwdMsg = document.getElementById('inlineChangePwdMsg');
+
+    if (openChangePwdBtn) {
+        openChangePwdBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeAllPopups();
+        changePwdModal.style.display = 'block';
+        // 清除旧的消息并聚焦第一个输入
+        if (changePwdMsg) { changePwdMsg.textContent = ''; changePwdMsg.classList.remove('text-success','text-danger'); }
+        const firstInput = changePwdModal.querySelector('input[type="password"]');
+        if (firstInput) firstInput.focus();
+        });
+    }
+    if (closeChangePwdBtn) closeChangePwdBtn.addEventListener('click', () => { closeAllPopups(); });
+    if (changePwdForm) {
+        changePwdForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            changePwdMsg.textContent = '';
+            const fd = new FormData(changePwdForm);
+            fetch('{% url "inline_change_password" %}', { method: 'POST', body: fd })
+            .then(r=>r.json()).then(j=>{
+                if(j.ok){
+                    changePwdMsg.textContent = '已修改';
+                    changePwdMsg.classList.remove('text-danger');
+                    changePwdMsg.classList.add('text-success');
+                    setTimeout(()=>{ changePwdModal.style.display='none'; changePwdMsg.textContent=''; }, 1200);
+                } else {
+                    changePwdMsg.textContent = j.error || '修改失败';
+                    changePwdMsg.classList.remove('text-success');
+                    changePwdMsg.classList.add('text-danger');
+                }
+            }).catch(()=>{
+                changePwdMsg.textContent = '网络错误';
+                changePwdMsg.classList.remove('text-success');
+                changePwdMsg.classList.add('text-danger');
+            });
+        });
+    }
+
+    // Password strength meter for inline modal
+    const inlineNewPwd = document.getElementById('inlineNewPwd');
+    const inlinePwdBar = document.querySelector('#inlinePwdStrength .bar > i');
+    const inlinePwdText = document.getElementById('inlinePwdStrengthText');
+
+    function calcPwdStrength(pwd){
+        let score = 0;
+        if (!pwd) return {score:0, label:'-' };
+        if (pwd.length >= 8) score += 1;
+        if (pwd.length >= 12) score += 1;
+        if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score += 1;
+        if (/[0-9]/.test(pwd)) score += 1;
+        if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
+        let label = '极弱';
+        if (score <= 1) label = '极弱';
+        else if (score == 2) label = '较弱';
+        else if (score == 3) label = '一般';
+        else if (score == 4) label = '较强';
+        else label = '很强';
+        return {score, label};
+    }
+
+    if (inlineNewPwd) {
+        inlineNewPwd.addEventListener('input', function(){
+            const v = inlineNewPwd.value || '';
+            const {score, label} = calcPwdStrength(v);
+            const pct = Math.min(100, Math.round((score / 5) * 100));
+            if (inlinePwdBar) inlinePwdBar.style.width = pct + '%';
+            if (inlinePwdText) inlinePwdText.textContent = '强度：' + label;
+            // color gradient from orange to green
+            if (inlinePwdBar) inlinePwdBar.style.background = score >=4 ? 'linear-gradient(90deg,#10b981,#059669)' : (score>=2 ? 'linear-gradient(90deg,#f97316,#f59e0b)' : 'linear-gradient(90deg,#f97316,#f97316)');
+        });
+    }
+
     document.addEventListener('click', (e) => {
         if (avatarMenu && !avatarMenu.contains(e.target) && !avatarToggle.contains(e.target) &&
-            inlinePanel && !inlinePanel.contains(e.target)) {
+            inlinePanel && !inlinePanel.contains(e.target) &&
+            changePwdModal && !changePwdModal.contains(e.target)) {
             closeAllPopups();
         }
     });

@@ -457,3 +457,19 @@ body.no-scroll-overlay {
         gap: 16px;
     }
 }
+
+/* ========= Inline settings / password helper styles (moved from template) ========= */
+.btn-change-pwd {
+    background: #f3c623;
+    color: #111;
+    border: none;
+}
+.pwd-strength { display:flex; align-items:center; gap:8px; margin-top:6px; }
+.pwd-strength .bar { width:120px; height:8px; background:#e6e6e6; border-radius:6px; overflow:hidden; }
+.pwd-strength .bar > i { display:block; height:100%; width:0%; background:linear-gradient(90deg,#f97316,#10b981); transition:width .18s ease; }
+.pwd-strength .level { font-size:12px; color:#666; }
+
+.settings-footer { display:flex; gap:12px; align-items:center; }
+.settings-footer .btn { padding:8px 14px; min-width:120px; border-radius:8px; font-size:14px; }
+.settings-footer .btn-change-pwd { background:#f3c623; color:#111; border:none; }
+

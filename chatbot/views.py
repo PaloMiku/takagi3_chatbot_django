@@ -11,9 +11,13 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.core.cache import cache
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.contrib.auth import update_session_auth_hash
 import random
 import string
 
@@ -252,6 +256,106 @@ def send_email_code(request):
         return JsonResponse({'ok': False, 'error': f'发送失败: {e}'})
     return JsonResponse({'ok': True})
 
+
+@require_POST
+def send_reset_code(request):
+    """发送用于密码找回的验证码（邮件 HTML 美化）。"""
+    email = request.POST.get('email','').strip().lower()
+    if not email:
+        return HttpResponseBadRequest('缺少邮箱')
+    freq_key = f'pwd_reset_code_freq:{email}'
+    if cache.get(freq_key):
+        return JsonResponse({'ok': False, 'error': '发送太频繁，请稍后再试'})
+    code = ''.join(random.choices(string.digits, k=6))
+    cache.set(f'pwd_reset_code:{email}', code, 300)  # 5 分钟有效
+    cache.set(freq_key, 1, 60)
+    cache.delete(f'pwd_reset_code_attempts:{email}')
+    # 发送 HTML 邮件
+    try:
+        subject = '密码重置验证码 - Takagi AI'
+        # 尝试获取站点域名
+        site_url = getattr(settings, 'SITE_URL', None)
+        if not site_url:
+            try:
+                site = get_current_site(request)
+                site_url = f'https://{site.domain}'
+            except Exception:
+                site_url = '/'
+        html_content = render_to_string('email/password_reset_email.html', {'code': code, 'site_url': site_url, 'email': email})
+        text_content = strip_tags(html_content)
+        msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [email])
+        msg.attach_alternative(html_content, 'text/html')
+        msg.send(fail_silently=False)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': f'发送失败: {e}'})
+    return JsonResponse({'ok': True})
+
+
+def password_reset_request(request):
+    """渲染邮箱输入页面，用户提交邮箱以接收验证码。"""
+    if request.method == 'POST':
+        email = request.POST.get('email','').strip().lower()
+        if not email:
+            return render(request, 'password_reset_request.html', {'error': '请输入邮箱'})
+        # 只要发送验证码（不校验邮箱是否存在），前端会提示
+        # 使用 AJAX 调用 send_reset_code
+        return render(request, 'password_reset_request.html', {'sent': True, 'email': email})
+    return render(request, 'password_reset_request.html')
+
+
+def password_reset_confirm(request):
+    """用户提交验证码与新密码以完成重置。"""
+    if request.method == 'POST':
+        email = request.POST.get('email','').strip().lower()
+        code = request.POST.get('code','').strip()
+        new1 = request.POST.get('new_password1','')
+        new2 = request.POST.get('new_password2','')
+        ctx = {'email': email}
+        if not email or not code or not new1 or not new2:
+            ctx['error'] = '请填写所有字段'
+            return render(request, 'password_reset_confirm.html', ctx)
+        if new1 != new2:
+            ctx['error'] = '两次新密码不一致'
+            return render(request, 'password_reset_confirm.html', ctx)
+        saved_code = cache.get(f'pwd_reset_code:{email}')
+        if not saved_code:
+            ctx['error'] = '验证码已过期，请重新获取'
+            return render(request, 'password_reset_confirm.html', ctx)
+        if saved_code != code:
+            attempts = cache.get(f'pwd_reset_code_attempts:{email}', 0) + 1
+            cache.set(f'pwd_reset_code_attempts:{email}', attempts, 300)
+            if attempts >= 5:
+                cache.delete(f'pwd_reset_code:{email}')
+                ctx['error'] = '验证码错误次数过多，请重新获取'
+            else:
+                ctx['error'] = f'验证码错误，还可再尝试 {5 - attempts} 次'
+            return render(request, 'password_reset_confirm.html', ctx)
+        # 验证通过，查找用户并设置新密码
+        try:
+            user = User.objects.filter(email=email).first()
+            if not user:
+                # 为了安全不暴露是否存在用户，仍提示成功
+                cache.delete(f'pwd_reset_code:{email}')
+                return render(request, 'password_reset_confirm.html', {'ok': True})
+            # 验证新密码强度
+            try:
+                validate_password(new1, user=user)
+                if not (any(c.isalpha() for c in new1) and any(c.isdigit() for c in new1)):
+                    return render(request, 'password_reset_confirm.html', {'error': '密码需同时包含字母与数字', 'email': email})
+            except ValidationError as e:
+                return render(request, 'password_reset_confirm.html', {'error': ' / '.join(e.messages), 'email': email})
+            user.set_password(new1)
+            user.save()
+            cache.delete(f'pwd_reset_code:{email}')
+            # 自动登录用户
+            auth.login(request, user)
+            return render(request, 'password_reset_confirm.html', {'ok': True})
+        except Exception as e:
+            return render(request, 'password_reset_confirm.html', {'error': f'重置失败: {e}', 'email': email})
+    # GET
+    email = request.GET.get('email','').strip().lower()
+    return render(request, 'password_reset_confirm.html', {'email': email})
+
 @require_POST
 def password_validate(request):
     """AJAX 密码验证：返回内置验证器错误与自定义强度信息。"""
@@ -342,6 +446,37 @@ def user_settings_update(request):
         request.user.username = nickname
         request.user.save(update_fields=['username'])
     return JsonResponse({'ok': True, 'nickname': request.user.username, 'avatar': user_setting.avatar_url})
+
+
+@login_required
+@require_POST
+def inline_change_password(request):
+    """AJAX: 内联设置弹窗中的修改密码接口，返回 JSON。"""
+    old = request.POST.get('old_password','')
+    new1 = request.POST.get('new_password1','')
+    new2 = request.POST.get('new_password2','')
+    if not old or not new1 or not new2:
+        return JsonResponse({'ok': False, 'error': '请填写所有字段'})
+    if new1 != new2:
+        return JsonResponse({'ok': False, 'error': '两次新密码不一致'})
+    user = request.user
+    if not user.check_password(old):
+        return JsonResponse({'ok': False, 'error': '旧密码错误'})
+    # 强度校验
+    try:
+        validate_password(new1, user=user)
+        if not (any(c.isalpha() for c in new1) and any(c.isdigit() for c in new1)):
+            return JsonResponse({'ok': False, 'error': '密码需同时包含字母与数字'})
+    except ValidationError as e:
+        return JsonResponse({'ok': False, 'error': ' / '.join(e.messages)})
+    try:
+        user.set_password(new1)
+        user.save()
+        # 保持 session 不被登出
+        update_session_auth_hash(request, user)
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': f'修改失败: {e}'})
 
 def generate_summary(user, conversation_id, summary_cmd_local, client, current_send_chat, user_setting):
     """生成摘要文本。current_send_chat 已含上下文。"""
