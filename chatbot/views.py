@@ -268,8 +268,14 @@ def send_email_code(request):
     cache.set(freq_key, 1, 60)
     # 重置错误尝试次数
     cache.delete(f'reg_email_code_attempts:{email}')
+    # 发送 HTML 邮件
     try:
-        send_mail('注册验证码', f'您的验证码是: {code} (5分钟内有效)', settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+        subject = '注册验证码 - Takagi AI'
+        html_content = render_to_string('email/registration_email.html', {'code': code})
+        text_content = strip_tags(html_content)
+        msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [email])
+        msg.attach_alternative(html_content, 'text/html')
+        msg.send(fail_silently=False)
     except Exception as e:
         return JsonResponse({'ok': False, 'error': f'发送失败: {e}'})
     return JsonResponse({'ok': True})
