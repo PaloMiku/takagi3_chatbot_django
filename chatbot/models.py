@@ -41,6 +41,14 @@ class UserSetting(models.Model):
     avatar_url = models.URLField(blank=True, null=True)
     daily_message_count = models.IntegerField(default=0)
     last_message_date = models.DateField(default=timezone.now)
+    
+    # 语音合成设置
+    tts_enabled = models.BooleanField(default=False)  # 语音合成开关
+    tts_language = models.CharField(max_length=10, default="日语", choices=[("中文", "中文"), ("日语", "日语")])  # 语言选择
+    tts_noise_scale = models.FloatField(default=0.6)  # 音频噪音
+    tts_noise_scale_w = models.FloatField(default=0.668)  # 音频噪音权重
+    tts_length_scale = models.FloatField(default=1.2)  # 音频长度缩放
+    tts_api_url = models.CharField(max_length=255, blank=True, null=True)  # 自定义TTS API地址
 
     def __str__(self):
         return f'{self.user.username}'

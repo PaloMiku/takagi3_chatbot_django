@@ -126,7 +126,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 if not user.is_superuser and not user_setting.user_api_key:
                     user_setting.daily_message_count += 1
                     await database_sync_to_async(user_setting.save)()
-            await self.send_json({"done": True})
+            
+            # Send completion with TTS info
+            await self.send_json({
+                "done": True, 
+                "tts_enabled": user_setting.tts_enabled,
+                "final_text": final_text
+            })
         except BadRequestError as e:
             await self.send_json({"error": f"model_error: {e}"})
         except Exception as e:

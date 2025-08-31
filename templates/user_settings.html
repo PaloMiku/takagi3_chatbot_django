@@ -39,6 +39,45 @@
       <input name="avatar_url" class="form-control" value="{{ user_setting.avatar_url }}" placeholder="https://.../avatar.png" />
       <small class="form-text text-muted">留空则继续使用邮箱生成的默认头像。</small>
     </div>
+    
+    <!-- TTS语音合成设置 -->
+    <hr />
+    <h4>语音合成设置</h4>
+    <div class="mb-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="tts_enabled" id="tts_enabled" {% if user_setting.tts_enabled %}checked{% endif %}>
+        <label class="form-check-label" for="tts_enabled">
+          启用语音合成
+        </label>
+      </div>
+    </div>
+    <div id="tts-settings" style="{% if not user_setting.tts_enabled %}display: none;{% endif %}">
+      <div class="mb-3">
+        <label class="form-label">TTS API 地址 (可选)</label>
+        <input name="tts_api_url" class="form-control" value="{{ user_setting.tts_api_url }}" placeholder="https://your-tts-api.com/vits/" />
+        <small class="form-text text-muted">留空则使用默认API地址。</small>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">语言</label>
+        <select name="tts_language" class="form-control">
+          <option value="中文" {% if user_setting.tts_language == '中文' %}selected{% endif %}>中文</option>
+          <option value="日语" {% if user_setting.tts_language == '日语' %}selected{% endif %}>日语</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">音频噪音 (0.1-1.0)</label>
+        <input name="tts_noise_scale" type="number" class="form-control" value="{{ user_setting.tts_noise_scale|default:0.6 }}" min="0.1" max="1.0" step="0.1" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">音频噪音权重 (0.1-1.0)</label>
+        <input name="tts_noise_scale_w" type="number" class="form-control" value="{{ user_setting.tts_noise_scale_w|default:0.668 }}" min="0.1" max="1.0" step="0.001" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">音频长度缩放 (0.5-2.0)</label>
+        <input name="tts_length_scale" type="number" class="form-control" value="{{ user_setting.tts_length_scale|default:1.2 }}" min="0.5" max="2.0" step="0.1" />
+      </div>
+    </div>
+    
     <p class="text-muted small">提示：prompt 不可在此页面修改。如需全局摘要指令请到后台 BotSetting。</p>
     <button class="btn btn-primary" type="submit">保存</button>
     <a class="btn btn-secondary" href="/">返回聊天</a>
@@ -66,4 +105,18 @@
     </div>
     <button class="btn btn-warning" type="submit">修改密码</button>
   </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ttsEnabled = document.getElementById('tts_enabled');
+    const ttsSettings = document.getElementById('tts-settings');
+    
+    if (ttsEnabled && ttsSettings) {
+        ttsEnabled.addEventListener('change', function() {
+            ttsSettings.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+});
+</script>
 {% endblock %}

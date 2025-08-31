@@ -7,6 +7,21 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.tts-play-btn:hover {
+    background: #0056b3 !important;
+    transform: translateY(-1px);
+}
+
+.tts-loader {
+    opacity: 0.8;
+}
+</style>
 {% endblock %}
 
 
@@ -142,6 +157,52 @@
                 <input id="settings-avatar-url" name="avatar_url" class="form-control" value="{{ user.usersetting.avatar_url|default:'' }}" placeholder="https://.../avatar.png" />
                 <small class="form-text text-muted" style="font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; display: block;">留空则使用 Cravatar 邮箱头像。</small>
             </div>
+            
+            <!-- 语音合成设置 -->
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <input type="checkbox" id="settings-tts-enabled" name="tts_enabled" {% if user.usersetting.tts_enabled %}checked{% endif %} style="margin: 0;">
+                    <span>启用语音合成</span>
+                </label>
+                <div id="tts-settings-panel" style="margin-left: 20px; {% if not user.usersetting.tts_enabled %}display: none;{% endif %}">
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="settings-tts-api-url" style="font-size: 13px; margin-bottom: 3px;">TTS API地址</label>
+                        <input id="settings-tts-api-url" name="tts_api_url" class="form-control" 
+                               value="{{ user.usersetting.tts_api_url|default:'' }}" 
+                               placeholder="留空使用默认" 
+                               style="padding: 4px 6px; font-size: 13px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="settings-tts-language" style="font-size: 13px; margin-bottom: 3px;">语言</label>
+                        <select id="settings-tts-language" name="tts_language" class="form-control" style="padding: 4px 6px; font-size: 13px;">
+                            <option value="中文" {% if user.usersetting.tts_language == '中文' %}selected{% endif %}>中文</option>
+                            <option value="日语" {% if user.usersetting.tts_language == '日语' %}selected{% endif %}>日语</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="settings-tts-noise-scale" style="font-size: 13px; margin-bottom: 3px;">音频噪音 (<span id="noise-scale-value">{{ user.usersetting.tts_noise_scale|default:0.6 }}</span>)</label>
+                        <input type="range" id="settings-tts-noise-scale" name="tts_noise_scale" 
+                               class="form-control" min="0.1" max="1.0" step="0.1" 
+                               value="{{ user.usersetting.tts_noise_scale|default:0.6 }}" 
+                               style="height: 4px; background: #ddd; outline: none; border-radius: 2px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="settings-tts-noise-scale-w" style="font-size: 13px; margin-bottom: 3px;">噪音权重 (<span id="noise-scale-w-value">{{ user.usersetting.tts_noise_scale_w|default:0.668 }}</span>)</label>
+                        <input type="range" id="settings-tts-noise-scale-w" name="tts_noise_scale_w" 
+                               class="form-control" min="0.1" max="1.0" step="0.001" 
+                               value="{{ user.usersetting.tts_noise_scale_w|default:0.668 }}" 
+                               style="height: 4px; background: #ddd; outline: none; border-radius: 2px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="settings-tts-length-scale" style="font-size: 13px; margin-bottom: 3px;">长度缩放 (<span id="length-scale-value">{{ user.usersetting.tts_length_scale|default:1.2 }}</span>)</label>
+                        <input type="range" id="settings-tts-length-scale" name="tts_length_scale" 
+                               class="form-control" min="0.5" max="2.0" step="0.1" 
+                               value="{{ user.usersetting.tts_length_scale|default:1.2 }}" 
+                               style="height: 4px; background: #ddd; outline: none; border-radius: 2px;">
+                    </div>
+                </div>
+            </div>
+            
             <div class="settings-footer">
                 <!-- 黄色修改密码按钮，放在保存上方（视觉上靠上），使用相同 btn 尺寸并加变体类 -->
                 <button type="button" id="openChangePwdInline" class="btn btn-primary btn-change-pwd">修改密码</button>
@@ -149,6 +210,8 @@
                 <span id="inlineSettingMsg" class="save-msg">已保存</span>
             </div>
         </form>
+        <!-- Version display in bottom right corner -->
+        <div class="version-display">v{{ APP_VERSION }}</div>
     </div>
     <!-- Password change inline modal -->
     <div id="inlineChangePwdModal" class="inline-settings-panel" style="display:none;">
@@ -181,6 +244,8 @@
                 <span id="inlineChangePwdMsg" class="save-msg"></span>
             </div>
         </form>
+        <!-- Version display in bottom right corner -->
+        <div class="version-display">v{{ APP_VERSION }}</div>
     </div>
 </div>
 {% endblock %}
@@ -207,7 +272,26 @@
     // Initial scroll
     window.addEventListener('load', () => {
         setTimeout(scrollToBottom, 100);
+        // Add TTS buttons to existing AI messages
+        addTTSToExistingMessages();
     });
+
+    function addTTSToExistingMessages() {
+        fetch("{% url 'get_tts_settings' %}")
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok && data.settings.enabled) {
+                const receivedMessages = document.querySelectorAll('.message.received .message-content');
+                receivedMessages.forEach(messageElement => {
+                    const text = messageElement.textContent;
+                    if (text && text.trim()) {
+                        addTTSButton(messageElement.parentElement, text);
+                    }
+                });
+            }
+        })
+        .catch(e => console.error('获取TTS设置失败:', e));
+    }
 
 
     let ws = null;
@@ -315,6 +399,74 @@
                 }, 100);
             }
         });
+    }
+
+    // Modified WebSocket message handler to support TTS
+    function initWS(){
+        if (ws) return;
+        try {
+            const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${proto}://${window.location.host}/ws/chat/`);
+            
+            ws.onmessage = (ev) => {
+                try {
+                    const data = JSON.parse(ev.data);
+                    if(data.delta){
+                        currentReplyBuffer.textContent += data.delta;
+                        if(responsePreview) responsePreview.textContent = currentReplyBuffer.textContent;
+                        scrollToBottom();
+                    } else if(data.done){
+                        // Check if TTS is enabled and add TTS button
+                        if (data.tts_enabled && data.final_text) {
+                            addTTSButton(currentReplyBuffer.parentElement, data.final_text);
+                        }
+                        currentReplyBuffer = null;
+                    } else if(data.error){
+                        fallbackPost(lastUserMessage, true, data.error);
+                    }
+                } catch(e){ console.error("WS message parse error:", e); }
+            };
+            ws.onclose = () => { ws = null; };
+            ws.onerror = () => { ws = null; };
+        } catch(e) {
+            ws = null;
+            console.error("WS connection failed:", e);
+        }
+    }
+
+    function checkAndAddTTSButton(messageElement) {
+        // Check if TTS is enabled for current user
+        fetch("{% url 'get_tts_settings' %}")
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok && data.settings.enabled) {
+                const text = messageElement.textContent;
+                if (text && text.trim()) {
+                    addTTSButton(messageElement.parentElement, text);
+                }
+            }
+        })
+        .catch(e => console.error('获取TTS设置失败:', e));
+    }
+
+    function fallbackPost(message, appendError, errText){
+        fetch("{% url 'chatbot' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'message': message
+            })
+        }).then(r => r.json()).then(data => {
+            const response = (appendError && errText ? `[WS失败:${errText}] ` : '') + data.response;
+            if(currentReplyBuffer) { 
+                currentReplyBuffer.textContent = response; 
+                checkAndAddTTSButton(currentReplyBuffer);
+            }
+            if(responsePreview) responsePreview.textContent = response;
+            scrollToBottom();
+            currentReplyBuffer = null;
+        }).catch(err => console.error("Fallback POST error:", err));
     }
 
     if (chatHistoryButton) {
@@ -483,6 +635,17 @@
         inlineForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(inlineForm);
+            
+            // 添加TTS设置到表单数据
+            formData.set('tts_enabled', ttsEnabledCheckbox?.checked ? 'true' : 'false');
+            if (ttsEnabledCheckbox?.checked) {
+                formData.set('tts_api_url', document.getElementById('settings-tts-api-url')?.value || '');
+                formData.set('tts_language', document.getElementById('settings-tts-language')?.value || '中文');
+                formData.set('tts_noise_scale', document.getElementById('settings-tts-noise-scale')?.value || '0.6');
+                formData.set('tts_noise_scale_w', document.getElementById('settings-tts-noise-scale-w')?.value || '0.668');
+                formData.set('tts_length_scale', document.getElementById('settings-tts-length-scale')?.value || '1.2');
+            }
+            
             fetch("{% url 'user_settings_update' %}", { method: 'POST', body: formData })
             .then(r => r.json())
             .then(d => {
@@ -513,6 +676,113 @@
                 inlineMsg.classList.remove('text-success');
                 inlineMsg.classList.add('text-danger');
             });
+        });
+    }
+
+    // TTS settings toggle
+    const ttsEnabledCheckbox = document.getElementById('settings-tts-enabled');
+    const ttsSettingsPanel = document.getElementById('tts-settings-panel');
+    const noiseScaleSlider = document.getElementById('settings-tts-noise-scale');
+    const noiseScaleValue = document.getElementById('noise-scale-value');
+    const noiseScaleWSlider = document.getElementById('settings-tts-noise-scale-w');
+    const noiseScaleWValue = document.getElementById('noise-scale-w-value');
+    const lengthScaleSlider = document.getElementById('settings-tts-length-scale');
+    const lengthScaleValue = document.getElementById('length-scale-value');
+
+    if (ttsEnabledCheckbox && ttsSettingsPanel) {
+        ttsEnabledCheckbox.addEventListener('change', function() {
+            ttsSettingsPanel.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+
+    // Update slider values display
+    if (noiseScaleSlider && noiseScaleValue) {
+        noiseScaleSlider.addEventListener('input', function() {
+            noiseScaleValue.textContent = this.value;
+        });
+    }
+    if (noiseScaleWSlider && noiseScaleWValue) {
+        noiseScaleWSlider.addEventListener('input', function() {
+            noiseScaleWValue.textContent = this.value;
+        });
+    }
+    if (lengthScaleSlider && lengthScaleValue) {
+        lengthScaleSlider.addEventListener('input', function() {
+            lengthScaleValue.textContent = this.value;
+        });
+    }
+
+    // Current audio player for TTS
+    let currentAudio = null;
+
+    function playTTSAudio(audioUrl) {
+        try {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            currentAudio = new Audio(audioUrl);
+            currentAudio.play().catch(e => {
+                console.error('播放音频失败:', e);
+                alert('播放音频失败');
+            });
+        } catch (e) {
+            console.error('创建音频对象失败:', e);
+            alert('播放音频失败');
+        }
+    }
+
+    function showTTSLoader(messageElement) {
+        const loaderDiv = document.createElement('div');
+        loaderDiv.className = 'tts-loader';
+        loaderDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: #666;">
+                <div class="spinner" style="width: 12px; height: 12px; border: 2px solid #ddd; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span>正在生成语音...</span>
+            </div>
+        `;
+        messageElement.appendChild(loaderDiv);
+        return loaderDiv;
+    }
+
+    function addTTSButton(messageElement, text) {
+        const buttonDiv = document.createElement('div');
+        buttonDiv.innerHTML = `
+            <button class="tts-play-btn" style="margin-top: 8px; padding: 4px 8px; font-size: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                🔊 播放语音
+            </button>
+        `;
+        const button = buttonDiv.querySelector('.tts-play-btn');
+        button.addEventListener('click', function() {
+            generateAndPlayTTS(text, messageElement);
+        });
+        messageElement.appendChild(buttonDiv);
+    }
+
+    function generateAndPlayTTS(text, messageElement) {
+        const loader = showTTSLoader(messageElement);
+        
+        fetch("{% url 'generate_tts_audio' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'text': text
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            loader.remove();
+            if (data.ok && data.audio_url) {
+                playTTSAudio(data.audio_url);
+            } else {
+                alert('语音生成失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(err => {
+            loader.remove();
+            console.error('TTS请求失败:', err);
+            alert('语音生成失败');
         });
     }
 })();

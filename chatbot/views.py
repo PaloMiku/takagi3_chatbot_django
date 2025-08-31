@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, FileResponse, Http404
 from openai import OpenAI, BadRequestError
 from django.conf import settings
 import os
@@ -20,6 +20,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import update_session_auth_hash
 import random
 import string
+from .tts_utils import generate_tts_for_user, get_user_tts_settings
 
 #生成摘要的命令
 summary_cmd = ""
@@ -167,8 +168,28 @@ def chatbot(request):
     if request.method == 'POST':
         message = request.POST.get('message')
         response = ask_openai(message, request)
-        # 由于 ask_openai 已经将消息保存到 Message 表，这里不需要额外保存
-        return JsonResponse({'message': message, 'response': response})
+        
+        # 检查是否需要生成语音
+        user_setting, _ = UserSetting.objects.get_or_create(user=user)
+        tts_audio_url = None
+        tts_error = None
+        
+        if user_setting.tts_enabled:
+            success, audio_path, error = generate_tts_for_user(response, user_setting)
+            if success and audio_path:
+                # 这里需要处理音频文件的存储和URL生成
+                # 由于gradio_client返回的可能是本地文件路径，需要处理成可访问的URL
+                tts_audio_url = audio_path  # 临时直接使用路径
+            else:
+                tts_error = error
+        
+        return JsonResponse({
+            'message': message, 
+            'response': response,
+            'tts_enabled': user_setting.tts_enabled,
+            'tts_audio_url': tts_audio_url,
+            'tts_error': tts_error
+        })
     return render(request, 'chatbot.html', {'chat_pairs': chat_pairs})
 
 def login(request):
@@ -425,24 +446,61 @@ def user_settings(request):
     saved = False
     error = None
     if request.method == 'POST':
-        model_name = request.POST.get('modelName', '').strip()
-        user_api_key = request.POST.get('user_api_key', '').strip()
-        user_base_url = request.POST.get('user_base_url', '').strip()
-        avatar_url = request.POST.get('avatar_url', '').strip()
-        nickname = request.POST.get('nickname', '').strip()
-        # 简单校验
-        if len(model_name) > 100:
-            error = '模型名称过长'
+        # 处理密码修改
+        if 'old_password' in request.POST:
+            # 密码修改逻辑保持原样
+            pass
         else:
-            user_setting.modelName = model_name or user_setting.modelName
-            user_setting.user_api_key = user_api_key or None
-            user_setting.user_base_url = user_base_url or None
-            user_setting.avatar_url = avatar_url or None
-            if nickname and len(nickname) <= 150 and nickname != request.user.username:
-                request.user.username = nickname
-                request.user.save(update_fields=['username'])
-            user_setting.save()
-            saved = True
+            # 处理设置更新
+            model_name = request.POST.get('modelName', '').strip()
+            user_api_key = request.POST.get('user_api_key', '').strip()
+            user_base_url = request.POST.get('user_base_url', '').strip()
+            avatar_url = request.POST.get('avatar_url', '').strip()
+            nickname = request.POST.get('nickname', '').strip()
+            
+            # TTS设置
+            tts_enabled = 'tts_enabled' in request.POST
+            tts_api_url = request.POST.get('tts_api_url', '').strip()
+            tts_language = request.POST.get('tts_language', '中文')
+            
+            try:
+                tts_noise_scale = float(request.POST.get('tts_noise_scale', 0.6))
+                tts_noise_scale_w = float(request.POST.get('tts_noise_scale_w', 0.668))
+                tts_length_scale = float(request.POST.get('tts_length_scale', 1.2))
+            except (ValueError, TypeError):
+                error = 'TTS参数格式错误'
+            
+            # 简单校验
+            if not error:
+                if len(model_name) > 100:
+                    error = '模型名称过长'
+                elif tts_enabled and not (0.1 <= tts_noise_scale <= 1.0):
+                    error = '音频噪音参数超出范围(0.1-1.0)'
+                elif tts_enabled and not (0.1 <= tts_noise_scale_w <= 1.0):
+                    error = '音频噪音权重参数超出范围(0.1-1.0)'
+                elif tts_enabled and not (0.5 <= tts_length_scale <= 2.0):
+                    error = '音频长度缩放参数超出范围(0.5-2.0)'
+                elif tts_enabled and tts_language not in ['中文', '日语']:
+                    error = '不支持的语言选择'
+                else:
+                    user_setting.modelName = model_name or user_setting.modelName
+                    user_setting.user_api_key = user_api_key or None
+                    user_setting.user_base_url = user_base_url or None
+                    user_setting.avatar_url = avatar_url or None
+                    
+                    # 保存TTS设置
+                    user_setting.tts_enabled = tts_enabled
+                    user_setting.tts_api_url = tts_api_url or None
+                    user_setting.tts_language = tts_language
+                    user_setting.tts_noise_scale = tts_noise_scale
+                    user_setting.tts_noise_scale_w = tts_noise_scale_w
+                    user_setting.tts_length_scale = tts_length_scale
+                    
+                    if nickname and len(nickname) <= 150 and nickname != request.user.username:
+                        request.user.username = nickname
+                        request.user.save(update_fields=['username'])
+                    user_setting.save()
+                    saved = True
     return render(request, 'user_settings.html', {
         'user_setting': user_setting,
         'saved': saved,
@@ -459,6 +517,29 @@ def user_settings_update(request):
     user_base_url = request.POST.get('user_base_url', '').strip()
     avatar_url = request.POST.get('avatar_url', '').strip()
     nickname = request.POST.get('nickname', '').strip()
+    
+    # TTS设置
+    tts_enabled = request.POST.get('tts_enabled') == 'true'
+    tts_language = request.POST.get('tts_language', '中文')
+    tts_api_url = request.POST.get('tts_api_url', '').strip()
+    
+    try:
+        tts_noise_scale = float(request.POST.get('tts_noise_scale', 0.6))
+        tts_noise_scale_w = float(request.POST.get('tts_noise_scale_w', 0.668))
+        tts_length_scale = float(request.POST.get('tts_length_scale', 1.2))
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'TTS参数格式错误'})
+    
+    # 验证参数范围
+    if not (0.1 <= tts_noise_scale <= 1.0):
+        return JsonResponse({'ok': False, 'error': '音频噪音参数超出范围(0.1-1.0)'})
+    if not (0.1 <= tts_noise_scale_w <= 1.0):
+        return JsonResponse({'ok': False, 'error': '音频噪音权重参数超出范围(0.1-1.0)'})
+    if not (0.5 <= tts_length_scale <= 2.0):
+        return JsonResponse({'ok': False, 'error': '音频长度缩放参数超出范围(0.5-2.0)'})
+    if tts_language not in ['中文', '日语']:
+        return JsonResponse({'ok': False, 'error': '不支持的语言选择'})
+    
     if model_name and len(model_name) > 100:
         return JsonResponse({'ok': False, 'error': '模型名称过长'})
     if nickname and len(nickname) > 150:
@@ -468,11 +549,56 @@ def user_settings_update(request):
     user_setting.user_api_key = user_api_key or None
     user_setting.user_base_url = user_base_url or None
     user_setting.avatar_url = avatar_url or None
+    
+    # 保存TTS设置
+    user_setting.tts_enabled = tts_enabled
+    user_setting.tts_language = tts_language
+    user_setting.tts_noise_scale = tts_noise_scale
+    user_setting.tts_noise_scale_w = tts_noise_scale_w
+    user_setting.tts_length_scale = tts_length_scale
+    user_setting.tts_api_url = tts_api_url or None
+    
     user_setting.save()
     if nickname and nickname != request.user.username:
         request.user.username = nickname
         request.user.save(update_fields=['username'])
     return JsonResponse({'ok': True, 'nickname': request.user.username, 'avatar': user_setting.avatar_url})
+
+
+@login_required 
+@require_POST
+def generate_tts_audio(request):
+    """生成TTS音频的API"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    text = request.POST.get('text', '').strip()
+    if not text:
+        return JsonResponse({'ok': False, 'error': '缺少文本内容'})
+    
+    user_setting, _ = UserSetting.objects.get_or_create(user=request.user)
+    if not user_setting.tts_enabled:
+        return JsonResponse({'ok': False, 'error': 'TTS功能未启用'})
+    
+    logger.info(f"用户 {request.user.username} 请求TTS生成: {text[:50]}...")
+    logger.info(f"TTS设置 - API: {user_setting.tts_api_url}, 语言: {user_setting.tts_language}")
+    
+    success, audio_path, error = generate_tts_for_user(text, user_setting)
+    
+    if success and audio_path:
+        logger.info(f"TTS生成成功: {audio_path}")
+        return JsonResponse({'ok': True, 'audio_url': audio_path})
+    else:
+        logger.error(f"TTS生成失败: {error}")
+        return JsonResponse({'ok': False, 'error': error or '语音合成失败'})
+
+
+@login_required
+def get_tts_settings(request):
+    """获取用户TTS设置的API"""
+    user_setting, _ = UserSetting.objects.get_or_create(user=request.user)
+    settings_data = get_user_tts_settings(user_setting)
+    return JsonResponse({'ok': True, 'settings': settings_data})
 
 
 @login_required

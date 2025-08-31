@@ -15,4 +15,6 @@ urlpatterns = [
     path('user/settings/update', views.user_settings_update, name='user_settings_update'),
     path('user/settings/change_password', views.inline_change_password, name='inline_change_password'),
     path('api/chat/history', views.get_chat_history, name='get_chat_history'),
+    path('api/tts/generate', views.generate_tts_audio, name='generate_tts_audio'),
+    path('api/tts/settings', views.get_tts_settings, name='get_tts_settings'),
 ]
