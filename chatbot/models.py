@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 import uuid
 from math import ceil
+from django.utils import timezone
 
 # Create your models here.
 class Chat(models.Model):
@@ -36,8 +37,10 @@ class UserSetting(models.Model):
     isBan = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     user_api_key = models.TextField(blank=True, null=True)
-    user_base_url = models.TextField(blank=True, null=True)
-    avatar_url = models.TextField(blank=True, null=True)
+    user_base_url = models.CharField(max_length=255, blank=True, null=True)
+    avatar_url = models.URLField(blank=True, null=True)
+    daily_message_count = models.IntegerField(default=0)
+    last_message_date = models.DateField(default=timezone.now)
 
     def __str__(self):
         return f'{self.user.username}'

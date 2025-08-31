@@ -8,6 +8,7 @@ from django.conf import settings
 from openai import AsyncOpenAI, BadRequestError
 from channels.db import database_sync_to_async
 from .models import UserSetting, BotSetting, Message
+from django.utils import timezone
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -38,6 +39,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # ORM helpers (run in thread pool)
         user_setting, _ = await database_sync_to_async(UserSetting.objects.get_or_create)(user=user)
+        
+        # Check daily message limit for non-superusers
+        if not user.is_superuser and not user_setting.user_api_key:
+            today = timezone.now().date()
+            if user_setting.last_message_date != today:
+                user_setting.daily_message_count = 0
+                user_setting.last_message_date = today
+                await database_sync_to_async(user_setting.save)()
+
+            if user_setting.daily_message_count >= 50:
+                await self.send_json({"error": "daily_limit_exceeded", "message": "您今天的免费对话额度已用完。"})
+                return
+        
         bot_setting = await database_sync_to_async(lambda: BotSetting.objects.first())()
 
         api_key = (
@@ -109,6 +123,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await database_sync_to_async(Message.objects.create)(
                     user=user, role='assistant', content=final_text, conversation_id=conversation_id
                 )
+                if not user.is_superuser and not user_setting.user_api_key:
+                    user_setting.daily_message_count += 1
+                    await database_sync_to_async(user_setting.save)()
             await self.send_json({"done": True})
         except BadRequestError as e:
             await self.send_json({"error": f"model_error: {e}"})

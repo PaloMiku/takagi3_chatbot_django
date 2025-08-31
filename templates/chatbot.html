@@ -106,6 +106,16 @@
             </button>
         </div>
         <form id="inlineSettingsForm">
+            {% if not request.user.is_superuser and not user.usersetting.user_api_key %}
+            <div class="form-group">
+                <label>每日免费额度</label>
+                {% widthratio user.usersetting.daily_message_count 50 100 as width_percentage %}
+                <div class="progress" style="height: 20px; margin-bottom: 4px; background-color: #e9ecef; border-radius: 4px; overflow: hidden;">
+                    <div class="progress-bar" role="progressbar" style="width: {{ width_percentage }}%; background-color: #007bff; height: 100%; transition: width 0.3s ease;" aria-valuenow="{{ user.usersetting.daily_message_count }}" aria-valuemin="0" aria-valuemax="50"></div>
+                </div>
+                <small class="form-text text-muted" style="font-size: 12px; color: #6c757d; display: block;">{{ user.usersetting.daily_message_count }}/50 条</small>
+            </div>
+            {% endif %}
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="settings-nickname">昵称</label>
@@ -128,7 +138,7 @@
             <div class="form-group">
                 <label for="settings-avatar-url">头像图片 URL</label>
                 <input id="settings-avatar-url" name="avatar_url" class="form-control" value="{{ user.usersetting.avatar_url|default:'' }}" placeholder="https://.../avatar.png" />
-                <small class="form-text text-muted" style="font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; display: block;">留空则使用 Gravatar 邮箱头像。</small>
+                <small class="form-text text-muted" style="font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; display: block;">留空则使用 Cravatar 邮箱头像。</small>
             </div>
             <div class="settings-footer">
                 <!-- 黄色修改密码按钮，放在保存上方（视觉上靠上），使用相同 btn 尺寸并加变体类 -->

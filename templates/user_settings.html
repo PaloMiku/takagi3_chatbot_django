@@ -8,6 +8,16 @@
   {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
   <form method="post">
     {% csrf_token %}
+    {% if not request.user.is_superuser and not user_setting.user_api_key %}
+    <div class="mb-3">
+        <label class="form-label">每日免费额度</label>
+        {% widthratio user_setting.daily_message_count 50 100 as width_percentage %}
+        <div class="progress" style="height: 20px;">
+            <div class="progress-bar" role="progressbar" style="width: {{ width_percentage }}%;" aria-valuenow="{{ user_setting.daily_message_count }}" aria-valuemin="0" aria-valuemax="50"></div>
+        </div>
+        <small class="form-text text-muted">{{ user_setting.daily_message_count }}/50 条</small>
+    </div>
+    {% endif %}
     <div class="mb-3">
       <label class="form-label">昵称</label>
       <input name="nickname" class="form-control" value="{{ request.user.username }}" maxlength="150" />

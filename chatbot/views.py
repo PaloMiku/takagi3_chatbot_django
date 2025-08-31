@@ -395,6 +395,15 @@ def logout(request):
 @login_required
 def user_settings(request):
     user_setting, _ = UserSetting.objects.get_or_create(user=request.user)
+    
+    # Reset daily count if date has changed
+    if not request.user.is_superuser and not user_setting.user_api_key:
+        today = timezone.now().date()
+        if user_setting.last_message_date != today:
+            user_setting.daily_message_count = 0
+            user_setting.last_message_date = today
+            user_setting.save()
+
     saved = False
     error = None
     if request.method == 'POST':
