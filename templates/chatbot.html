@@ -110,7 +110,7 @@
         <form id="inlineSettingsForm">
             {% if not request.user.is_superuser and not user.usersetting.user_api_key %}
             <div class="form-group">
-                <label>每日对话额度</label>
+                <label>每日对话额度 <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 0 4px; font-size: 12px; line-height: 1; border: none; background: none; color: #6c757d;" onclick="alert('因成本问题，本站每日对话额度存在限制，可自行填写兼容 OpenAI 的 API 免费使用。')" title="点击查看说明">?</button></label>
                 {% widthratio user.usersetting.daily_message_count 50 100 as width_percentage %}
                 <div class="progress" style="height: 20px; margin-bottom: 4px; background-color: #e9ecef; border-radius: 4px; overflow: hidden;">
                     <div class="progress-bar" role="progressbar" style="width: {{ width_percentage }}%; background-color: #007bff; height: 100%; transition: width 0.3s ease;" aria-valuenow="{{ user.usersetting.daily_message_count }}" aria-valuemin="0" aria-valuemax="50"></div>
