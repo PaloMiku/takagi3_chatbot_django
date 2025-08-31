@@ -140,18 +140,36 @@ def chatbot(request):
     if user.id is None:
         return redirect('login')
     else:
-        # 兼容旧 Chat 表：仍用于显示历史（后续可改用 Message）
-        chats = Chat.objects.filter(user=request.user).order_by('created_at')
+        # 使用新的 Message 模型显示聊天历史记录
+        # 获取所有用户消息和助手回复，按时间排序
+        messages = Message.objects.filter(
+            user=request.user, 
+            role__in=['user', 'assistant']
+        ).order_by('created_at')
+        
+        # 将消息按对话分组（用户消息+助手回复）
+        chat_pairs = []
+        user_msg = None
+        for msg in messages:
+            if msg.role == 'user':
+                user_msg = msg
+            elif msg.role == 'assistant' and user_msg:
+                chat_pairs.append({
+                    'user_message': user_msg,
+                    'assistant_response': msg,
+                    'created_at': user_msg.created_at
+                })
+                user_msg = None
+        
     # 确保有 UserSetting 以便模板访问 user.usersetting
     UserSetting.objects.get_or_create(user=user)
 
     if request.method == 'POST':
         message = request.POST.get('message')
         response = ask_openai(message, request)
-        # 仍写入旧 Chat 表，保持模板兼容
-        Chat.objects.create(user=request.user, message=message, response=response, created_at=timezone.now())
+        # 由于 ask_openai 已经将消息保存到 Message 表，这里不需要额外保存
         return JsonResponse({'message': message, 'response': response})
-    return render(request, 'chatbot.html', {'chats': chats})
+    return render(request, 'chatbot.html', {'chat_pairs': chat_pairs})
 
 def login(request):
     if request.method == 'POST':
@@ -486,6 +504,68 @@ def inline_change_password(request):
         return JsonResponse({'ok': True})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': f'修改失败: {e}'})
+
+@login_required
+def get_chat_history(request):
+    """获取用户的聊天历史记录 API"""
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 50))
+    
+    # 获取用户的所有对话消息（不包括系统消息和摘要）
+    messages = Message.objects.filter(
+        user=request.user,
+        role__in=['user', 'assistant'],
+        is_summary=False
+    ).select_related('user').order_by('-created_at')
+    
+    # 计算分页
+    total_messages = messages.count()
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
+    page_messages = messages[start_index:end_index]
+    
+    # 将消息转换为聊天对话格式
+    chat_pairs = []
+    current_pair = {}
+    
+    for msg in reversed(page_messages):  # 倒序以正确配对
+        if msg.role == 'user':
+            current_pair = {
+                'user_message': {
+                    'content': msg.content,
+                    'created_at': msg.created_at.isoformat(),
+                },
+                'assistant_response': None,
+                'conversation_id': str(msg.conversation_id)
+            }
+        elif msg.role == 'assistant' and current_pair:
+            current_pair['assistant_response'] = {
+                'content': msg.content,
+                'created_at': msg.created_at.isoformat(),
+            }
+            chat_pairs.append(current_pair)
+            current_pair = {}
+    
+    # 如果有未配对的用户消息，也添加到列表中
+    if current_pair and current_pair.get('user_message'):
+        chat_pairs.append(current_pair)
+    
+    # 按时间正序排列
+    chat_pairs.reverse()
+    
+    return JsonResponse({
+        'success': True,
+        'chat_pairs': chat_pairs,
+        'pagination': {
+            'current_page': page,
+            'per_page': per_page,
+            'total_messages': total_messages,
+            'total_pages': (total_messages + per_page - 1) // per_page,
+            'has_next': end_index < total_messages,
+            'has_previous': page > 1
+        }
+    })
+
 
 def generate_summary(user, conversation_id, summary_cmd_local, client, current_send_chat, user_setting):
     """生成摘要文本。current_send_chat 已含上下文。"""

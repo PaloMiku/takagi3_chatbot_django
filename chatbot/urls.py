@@ -14,4 +14,5 @@ urlpatterns = [
     path('user/settings', views.user_settings, name='user_settings'),
     path('user/settings/update', views.user_settings_update, name='user_settings_update'),
     path('user/settings/change_password', views.inline_change_password, name='inline_change_password'),
+    path('api/chat/history', views.get_chat_history, name='get_chat_history'),
 ]
