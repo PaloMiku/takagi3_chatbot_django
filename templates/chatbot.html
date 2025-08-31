@@ -323,8 +323,6 @@
             this.setAttribute('aria-expanded', isOpening);
             chatHistoryPanel.setAttribute('aria-hidden', !isOpening);
             chatHistoryPanel.classList.toggle('open');
-            mainContent.style.display = isOpening ? 'none' : 'block';
-            document.body.classList.toggle('no-scroll-overlay', isOpening);
             if (isOpening) {
                 scrollToBottom();
             }

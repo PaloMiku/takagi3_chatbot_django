@@ -249,7 +249,7 @@ body.no-scroll-overlay {
 .message.sent { margin-left: auto; flex-direction: row-reverse; }
 .message.received { margin-right: auto; }
 
-.message-text { display: flex; gap: 10px; align-items: flex-end; }
+.message-text { display: flex; gap: 8px; align-items: flex-end; }
 .message-sender img {
     width: 40px;
     height: 40px;
