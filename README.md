@@ -23,15 +23,6 @@ pyproject.toml     # 依赖与构建（使用 uv）
 .env.example       # 环境变量示例
 ```
 
-## 运行环境与依赖
-* Python >= 3.10
-* Django 4.2.x
-* channels 4.x + daphne 4.x （ASGI & WebSocket）
-* openai >= 1.0.0
-* python-dotenv 加载环境变量
-* whitenoise 提供静态文件（生产无需额外 Nginx 托管静态）
-* uv （极速包管理 & 虚拟环境）
-
 ## 一键快速启动 (开发模式)
 ```bash
 # 1. 安装 uv (若未安装)
@@ -90,27 +81,12 @@ DEFAULT_FROM_EMAIL=no-reply@example.com
 TOKEN_CONTEXT_LIMIT=3000
 ```
 
-## 切换到生产数据库 (PostgreSQL 示例)
-1. 安装驱动：
+## 使用限额重置
+
+可每日 0 点执行以自动重置。
+
 ```bash
-uv add psycopg2-binary
-```
-2. 修改 `django_chatbot/settings.py` 中 `DATABASES`：
-```python
-DATABASES = {
-  'default': {
-    'ENGINE': 'django.db.backends.postgresql',
-    'NAME': os.getenv('PG_NAME','takagi'),
-    'USER': os.getenv('PG_USER','takagi'),
-    'PASSWORD': os.getenv('PG_PASSWORD',''),
-    'HOST': os.getenv('PG_HOST','127.0.0.1'),
-    'PORT': os.getenv('PG_PORT','5432'),
-  }
-}
-```
-3. 新增相关环境变量并执行迁移：
-```bash
-uv run python manage.py migrate
+uv run python manage.py reset_daily_counts
 ```
 
 ## 许可证
