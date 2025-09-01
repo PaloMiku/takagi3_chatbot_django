@@ -10,7 +10,7 @@
     {% csrf_token %}
     {% if not request.user.is_superuser and not user_setting.user_api_key %}
     <div class="mb-3">
-        <label class="form-label">每日对话额度 <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 0 4px; font-size: 12px; line-height: 1; border: none; background: none; color: #6c757d;" onclick="alert('因成本问题，本站每日对话额度存在限制，可自行填写兼容 OpenAI 的 API 免费使用。')" title="点击查看说明">?</button></label>
+        <label class="form-label">每日对话限额 <button type="button" class="btn btn-sm btn-outline-secondary" style="padding: 0 4px; font-size: 12px; line-height: 1; border: none; background: none; color: #6c757d;" onclick="alert('因成本问题，本站每日对话限额存在限制，可自行填写兼容 OpenAI 的 API 免费使用。')" title="点击查看说明">?</button></label>
         {% widthratio user_setting.daily_message_count 50 100 as width_percentage %}
         <div class="progress" style="height: 20px;">
             <div class="progress-bar" role="progressbar" style="width: {{ width_percentage }}%;" aria-valuenow="{{ user_setting.daily_message_count }}" aria-valuemin="0" aria-valuemax="50"></div>
